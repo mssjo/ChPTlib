@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Usage: ./makeify_hf.sh FILE.hf 
+# Outputs FILE.make
+
+# Script that converts a FORM header file into an equivalent Make header file,
+# assuming it contains only simple definitions and ifdefs,
+# using the fact that that subset of their syntaxes are rather similar.
+
+# Used here to generate names.make from names.hf so that filenames and tags stay consistent.
+
 bt='`'
 
 {
