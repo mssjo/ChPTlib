@@ -1,0 +1,292 @@
+#ifndef `CHPTDIAGRAMVERTEXHF'
+#define CHPTDIAGRAMVERTEXHF
+
+* Procedures related to specifying vertices
+
+#include- ChPTdiagram_defs.hf
+
+*************************************************************************************************
+
+#procedure doderivs()
+    argument derivs;
+        repeat id sum(p?,q?, ?q) = sum(p+q, ?q);
+        id sum(p?) = p;
+    endargument;
+    repeat id derivs(q?, ?lz, mu?) = i_*q(mu) * derivs(q, ?lz);
+    id derivs(q?) = 1;
+#endprocedure
+
+#procedure makevertex(ID,NM,NP)
+    #call makevertexV(`ID',`NM',0,`NP')
+#endprocedure
+
+#procedure makevertexV(ID,NM,NV,NP)
+
+    #call barevertex(`ID',`NM',`NV',`NP')
+
+    #ifdef `CHECKCOM'
+    #elseif `ORDER'<`NP'
+    #else
+        skip; nskip vert`ID';
+
+        #do I=1,`NM'
+            id phi(f`ID'`I',?lz) = phi(f`ID'`I',?lz,p`ID'`I');
+        #enddo
+        repeat id phi(f1?, ?lz, mu?, p?) = i_ * p(mu) * phi(f1,?lz,p);
+
+        .sort:>>makevertex: `ID'<<;
+
+        skip; nskip vert`ID';
+        drop assign`ID';
+
+*         NOTE: factor of i_ inserted here for a proper vertex factor
+        multiply i_ * assign`ID';
+        repeat id assign(?a) * assign(?b) = assign(?a, ?b);
+
+*         Vector fields have no flavor so they are a bit easier to pick out
+        #do I=1,`NV'
+            id,assign(?a, p?extmomenta[n], ?b) * A(?lz, mu?)
+                = assign(?a, ?b) * external[n](mu) * derivs(p, ?lz);
+            #call doderivs
+        #enddo
+
+        #do N=1,`NM'
+            id,ifmatch->continue`N' assign(i?extflav[n], ?a)
+                = assign(?a) * pickout(i,extmomenta[n],+1);
+            id,ifmatch->continue`N' assign(iprop(?i, q?), ?a)
+                = assign(?a) * pickout(i`ID'`N',q,+1) * iprop(?i,q, i`ID'`N');
+            id,ifmatch->continue`N' assign(oprop(?i, q?), ?a)
+                = assign(?a) * pickout(i`ID'`N',q,-1) * oprop(?i,q, i`ID'`N');
+
+            exit "ERROR: failed to assign leg on vert`ID'";
+
+            label continue`N';
+            #call pickout({1+`NM'-`N'},vert`ID')
+            skip; nskip vert`ID';
+
+            #ifdef `DEBUG'
+                print +s;
+            #endif
+            .sort
+            skip; nskip vert`ID';
+        #enddo
+        #do N=1,`NV'
+            id assign(A(mu?,p?), ?a) = assign(?a) * p(mu);
+
+            #ifdef `DEBUG'
+                print +s;
+            #endif
+            .sort
+            skip; nskip vert`ID';
+        #enddo
+
+        #call doderivs
+
+        id assign() = 1;
+        if(match(assign(?a))) exit "ERROR: unassigned legs on vert`ID'";
+
+        #ifdef `SQED'
+*     Odd indices belong to phi, even to phi*.
+*     Enforce this on external particles, and mark it on the propagators,
+*      so that proper contractions can be enforced.
+*     The indices serve no other purpose after this point.
+            id delt(f1?f`ID'x[m], f2?extflav[n]) = oppositeparity(m,n);
+            id delt(f1?f`ID'x[n], i?) * halfprop(?q, i?) = halfprop(?q, i, n);
+            id oppositeparity(m?even_,n?odd_) = 1;
+            id oppositeparity(m?odd_,n?even_) = 1;
+            id oppositeparity(m?,n?) = 0;
+        #endif
+
+        .sort:>>makevertex: `ID'<<;
+    #endif
+#endprocedure
+
+#procedure barevertex(ID,NM,NV,NP)
+
+    #ifdef `CHECKCOM'
+*     Just sanity check the associated assign(...)
+        .sort
+        skip; drop assign`ID';
+
+        global COM`ID' = assign`ID';
+
+        repeat id assign(?a) * assign(?b) = assign(?a, ?b);
+
+        repeat;
+            id assign(p?extmomenta, ?a) = p + assign(?a);
+            id assign(i?extflav[n], ?a) = extmomenta[n] + assign(?a);
+            id assign(iprop(?i, q?), ?a) = +q + assign(?a);
+            id assign(oprop(?i, q?), ?a) = -q + assign(?a);
+        endrepeat;
+
+        id assign() = 0;
+        .sort
+    #elseif `ORDER' < `NP'
+*         Ignore vertices of too high order
+        #message[makevertex]~~~ vertex `ID' omitted: NP=`NP' higher than ORDER=`ORDER'
+        local vert`ID' = 0;
+        .sort:>>barevertex: `ID'<<;
+    #else
+        .sort
+
+        #if `NP'==LO
+            #define NP "2"
+        #elseif `NP'==NLO
+            #define NP "4"
+        #elseif `NP'==NNLO || `NP'==N2LO
+            #define NP "6"
+        #elseif `NP'==NNNLO || `NP'==N3LO
+            #define NP "8"
+        #endif
+
+        #define NX "{`NM'+`NV'}"
+
+        #ifndef `EXTENDFLAV'
+            #define EXTENDFLAV "`NEXT'"
+        #endif
+        #if `EXTENDFLAV'<`NM'
+            indices <f{`EXTENDFLAV'+1}=Nf>,...,<f`NM'=Nf>;
+            #redefine EXTENDFLAV "`NM'"
+        #endif
+
+        indices <i`ID'1>,...,<i`ID'`NX'>;
+        indices <f`ID'1>,...,<f`ID'`NM'>;
+        set f`ID'x: <f`ID'1>,...,<f`ID'`NM'>;
+
+        indices <mu`ID'1>,...,<mu`ID'`NP'>;
+        set mu`ID'x: <mu`ID'1>,...,<mu`ID'`NP'>;
+
+        vectors <p`ID'1>,...,<p`ID'`NX'>;
+        set p`ID'x: <p`ID'1>,...,<p`ID'`NX'>;
+
+        skip;
+
+        #include names.hf
+
+        local vert`ID' =
+            #ifdef `SQED'
+                #if (`NM'==2) && (`NV'==2)
+                    e^2 * A(mu`ID'1)*A(mu`ID'1) * phi(f`ID'1)*phi(f`ID'2) * delEE(`NP')
+                #elseif (`NM'==2) && (`NV'==1)
+                    -i_*e * (phi(f`ID'1, mu`ID'1)*phi(f`ID'2) - phi(f`ID'1)*phi(f`ID'2, mu`ID'1)) * A(mu`ID'1)  * delE(`NP')
+                #elseif (`NM'==4) && (`NV'==0)
+                    -i_*lambda/fac_(4) * <phi(f`ID'1)>*...*<phi(f`ID'4)> * delL(`NP')
+                #elseif (`NM'==2) && (`NV'==0)
+                    i_*(phi(f`ID'1,mu`ID'1)*phi(f`ID'2,mu`ID'1) * delZ(`NP') - phi(f`ID'1)*phi(f`ID'2) * delM(`NP'))
+                #elseif (`NM'==0) && (`NV'==2)
+                    -i_*(A(mu`ID'1,mu`ID'2)*A(mu`ID'1,mu`ID'2) - A(mu`ID'1,mu`ID'2)*A(mu`ID'2,mu`ID'1)) * delA(`NP')
+                #else
+                    0
+                #endif
+            #else
+                #system cd `VERTEXDIR'/.. && pwd && echo "`MAKECMD' `VERTEXFILE'" && `MAKECMD' `VERTEXFILE'
+                #message[makevertex]~~~ importing `VERTEXFILE'
+                #include- `VERTEXFILE'
+            #endif
+            ;
+
+        #ifdef `SQED'
+*     SQED renormalization: each counterterm is viewed as a series del(2)+del(4)+... where each cancels
+*     divergences at the loop level of the corresponding ChPT power counting order.
+            id delEE(n?) = sum_(m,2,n,2, delE(m)*delE(n-m));
+            id delZ?{delZ,delM,delA}(2) = 0;
+            id delZ?{delE,delL}(2) = 1;
+        #endif
+
+        multiply replace_(<lorentz[1],mu`ID'x[1]>,...,<lorentz[`NP'],mu`ID'x[`NP']>);
+        #if `NM'>0
+            multiply replace_(<f1,f`ID'1>,...,<f`NM',f`ID'`NM'>);
+        #endif
+
+        bracket Tr;
+        print +s;
+        .sort:>>barevertex: `ID'<<;
+    #endif
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure pickout(NM,VERT)
+    #call pickoutX(`NM',`VERT',phi)
+#endprocedure
+#procedure pickoutV(NV,VERT)
+    #call pickoutX(`NV',`VERT',A)
+#endprocedure
+
+#procedure pickoutX(NM,VERT,PHI)
+* This procedure picks out an index I and a momentum P
+* from a vertex by forming all ways to identify one of
+* the legs of the vertex with I and P.
+*
+* - NM is the number of fields in the vertex that have not been
+*      picked out yet
+* - VERT is an expression containing the vertex
+
+    #ifdef `DEBUG'
+        print +s;
+    #endif
+    .sort
+
+    indices <i1>,...,<i`NM'>;
+    vectors <q1>,...,<q`NM'>;
+
+    skip;
+    nskip `VERT';
+
+* Identify a product of NM fields with itself
+* times the sum of all ways to identify one of them with I and P
+* (This clever preprocessor monstrosity is due to Hans Bijnens)
+    id,once pickout(i?,p?,sgn?)
+    #do J = 1, `NM'
+        *`PHI'(i`J'?, q`J'?)
+    #enddo
+    = pickout(i,p,sgn)
+    * (
+        #do J = 1, `NM'
+        +delt(q`J', p)*delt(i`J', i)* elim(i`J', q`J')
+        #enddo
+    )
+    #do J = 1, `NM'
+        *`PHI'(i`J', q`J')
+    #enddo
+    ;
+
+    #message[pickout]~~~ `VERT': `NM' `PHI' left
+
+    #ifdef `DEBUG'
+        print +s;
+    #endif
+    .sort
+    skip;
+    nskip `VERT';
+
+* Eliminate the picked-out fields
+    #if `PHI' == phi
+        id elim(i?, p?) * phi(i?, p?) = 1;
+    #elseif `PHI' == A
+        id elim(p1?,p2?) * A(p1?,p2?) = p2(p1);
+    #endif
+
+* Momentum replacement needs to a bit subtler because replace_ does not handle minus signs well
+    #do SIGN={+1,-1}
+        if(match(pickout(?p,`SIGN')));
+            repeat;
+                id delt(p?,q?) * p?(mu?) = `SIGN'*delt(p,q) * q(mu);
+                id delt(p?,q?) * p?.q?   = `SIGN'*delt(p,q) * q.q;
+                id delt(p?,q?) * p?.p?   =        delt(p,q) * q.q;
+            endrepeat;
+            repeat id delt(p?,q?) * p?.k? = `SIGN'*delt(p,q) * q.k;
+            id delt(p?,q?) = 1;
+        endif;
+    #enddo
+
+
+    id pickout(?a) = 1;
+
+    .sort
+
+#endprocedure
+
+
+#endif

@@ -1,0 +1,4 @@
+
+* The ChPT lagrangian at LO (order p^2)
+
++ F^2/4 * ( tr(u(mu),u(mu)) + tr(chip) )

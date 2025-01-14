@@ -1,0 +1,214 @@
+* Header file for bblock-related things
+
+* Kalman's parametrization is Nf=2 only
+#ifdef `KALPAR'
+    #define NF "2"
+    cfunction kalmancoeff;
+#endif
+#ifdef `GENPAR'
+    cfunction a;
+#endif
+#ifndef `NF'
+    #define NFGENERAL
+#endif
+
+* Standard imports
+#define NEXT "{`NM'+`NV'}"
+#define NOMANDEL
+#include ChPTdiagram_utils.hf
+#include ChPTdiagram_defs.hf
+
+* Name relevant things
+#include- names.hf
+
+* Define building blocks
+* Building blocks are grouped by rank (number of Lorentz indices)
+* Extra indices beyond the basic rank indicate appropriate derivatives
+* Rank-0 u and rank-1 u are separate objects
+* Weird rank-1 chip/chim from the p6 lagrangian are chipx/chimx
+#define BBLOCKS0 "u,udag,chi,chidag,chip,U,Udag"
+#define BBLOCKS1 "Gamma,u,U,Udag"
+#define BBLOCKMAXRANK "{`NP'/2}"
+#if `NP' >= 4
+    #redefine BBLOCKS0 "`BBLOCKS0',chim"
+    #define BBLOCKS2 "fp,fm,FL,FR"
+    #ifdef `NF'
+        #if `NF'==2
+            #redefine BBLOCKS0 "`BBLOCKS0',chitil,chitildag"
+            #redefine BBLOCKS2 "`BBLOCKS2',U,Udag"
+        #endif
+    #endif
+#endif
+#if `NP' >= 6
+    #redefine BBLOCKS1 "`BBLOCKS1',chipx,chimx,chip,chim,chi,chidag"
+    #redefine BBLOCKS2 "`BBLOCKS2',h,u"
+    #define BBLOCKS3 "FL,FR,fp,fm"
+    #ifdef `NF'
+        #if `NF'==3
+            #redefine BBLOCKS0 "`BBLOCKS0',chitil,chitildag"
+        #elseif `NF'==2
+            #redefine BBLOCKS1 "`BBLOCKS1',chi,chidag,chitil,chitildag"
+        #endif
+    #endif
+#endif
+#if `NP' >= 8
+    #redefine BBLOCKS2 "`BBLOCKS2',chi,chidag,chip,chim"
+    #redefine BBLOCKS3 "`BBLOCKS3',u,chip,chim"
+    #define BBLOCKS4 "FL,FR,fp,fm,chip,chim"
+    #define BBLOCKS5 "fp,fm"
+    #define BBLOCKS6 "fp,fm"
+    #redefine BBLOCKMAXRANK "6"
+    #ifdef `NF'
+        #if `NF'==4
+            #redefine BBLOCKS0 "`BBLOCKS0',chitil,chitildag"
+        #elseif `NF'==3
+            #redefine BBLOCKS0 "`BBLOCKS1',chi,chidag,chitil,chitildag"
+        #elseif `NF'==2
+            #redefine BBLOCKS2 "`BBLOCKS2',chi,chidag,chitil,chitildag"
+        #endif
+    #endif
+#endif
+#define BBLOCKS "`BBLOCKS0'"
+#do RANK=1,`BBLOCKMAXRANK'
+    #redefine BBLOCKS "`BBLOCKS',`BBLOCKS`RANK''"
+#enddo
+* Building blocks plus building block-like things; basically anything that can come out of the Lagrangian
+#define XBBLOCKS "Phi,Q,v,gL,gR,h,gLdag,gRdag,hdag,`BBLOCKS'"
+
+* Trace manipulation
+#procedure trace()
+    repeat;
+        id trL(?x) * bb?{`XBBLOCKS'}(?lz) = trL(?x, bb(?lz));
+*         This accounts for nested traces due to GENPAR/KALPAR
+        id trL(?x) * tr(?y) = tr(?y) * trL(?x);
+    endrepeat;
+    id trL(?x) * trR = tr(?x);
+    id tr() = Nf;
+#endprocedure
+#procedure untrace()
+    id tr(?x) = trL(?x) * trR;
+    repeat id trL(?x, bb?{`XBBLOCKS'}(?lz)) = trL(?x) * bb(?lz);
+#endprocedure
+#procedure hidetrace()
+*     Assumes the state produced by untrace()
+    id bb?{`XBBLOCKS'}(?x) * trR = bb(?x, trR);
+    id trL = 1;
+#endprocedure
+#procedure unhidetrace()
+    multiply left trL;
+    multiply right trL;
+    id bb?{`XBBLOCKS'}(?x, trR) = bb(?x) * trR * trL;
+    id trL*trL = 1;
+*     Leaves the state accepted by trace()
+#endprocedure
+
+* Standard list of Lorentz indices
+#define INDEXLISTNOMU "nu,ro,si,ka,la,al,be,ga,de"
+#define INDEXLIST "mu,`INDEXLISTNOMU'"
+#do MU={`INDEXLIST'}
+    index `MU';
+    symbol e`MU';* used for parity checking
+#enddo
+
+* Substitution of pre-expanded building blocks,
+* with on-the-fly generation unless NOMAKE is defined,
+* after applying transformations if TRANSFORM is defined
+* without actually performing the substitution if DRYRUN is defined
+#procedure substitute(BBLOCK,RANK)
+
+*   Generate appropriate list of Lorentz indices according to rank
+    #define INDICES ""
+    #define R "`RANK'"
+    #do INDEX={`INDEXLIST'}
+        #if (`R'<=0)
+            #breakdo
+        #endif
+        #redefine INDICES "`INDICES',`INDEX'?"
+        #redefine R "{`R'-1}"
+    #enddo
+
+    #define NNM "`NM'"
+    #define NNV "`NV'"
+
+*     Apply transformation to objects with well-defined transformation properties before substituting them
+*     The l,r on u(dag) is to indicate which equivalent transformation property to use
+    #ifdef `TRANSFORM'
+        #if `TRANSFORM'==CHIRAL
+            id u(Nm?,Nv?,r) = gR * u(Nm,Nv) * hdag;
+            id u(Nm?,Nv?,l) = h * u(Nm,Nv) * gLdag;
+            id udag(Nm?,Nv?,r) = h * udag(Nm,Nv) * gRdag;
+            id udag(Nm?,Nv?,l) = gL * udag(Nm,Nv) * hdag;
+
+            id chi(Nm?,Nv?) = gR * chi(Nm,Nv) * gLdag;
+            id chidag(Nm?,Nv?) = gL * chidag(Nm,Nv) * gRdag;
+
+            id l(Nm?,Nv?,mu?) = gL * l(Nm,Nv,mu) * gLdag - i_ * gL(mu) * gLdag;
+            id r(Nm?,Nv?,mu?) = gR * r(Nm,Nv,mu) * gRdag - i_ * gR(mu) * gRdag;
+        #elseif `TRANSFORM'==P
+            id u(Nm?,Nv?,r?{r,l}) = udag(Nm,Nv);
+            al udag(Nm?,Nv?,r?{r,l}) = u(Nm,Nv);
+
+            id chi(Nm?,Nv?) = chidag(Nm,Nv);
+            al chidag(Nm?,Nv?) = chi(Nm,Nv);
+
+            id l(Nm?,Nv?,mu?) = r(Nm,Nv,mu);
+            al r(Nm?,Nv?,mu?) = l(Nm,Nv,mu);
+        #elseif `TRANSFORM'==C
+            id bb?{u,udag}(Nm?,Nv?,r?{r,l}) = bb(Nm,Nv);
+
+*             chi(dag) unchanged
+
+            id l(Nm?,Nv?,mu?) = -r(Nm,Nv,mu);
+            al r(Nm?,Nv?,mu?) = -l(Nm,Nv,mu);
+        #endif
+    #else
+*         This is just stripping away transformation information
+        id bb?{u,udag}(Nm?,Nv?,r?{r,l}) = bb(Nm,Nv);
+    #endif
+
+*     Enact substitution, assuming first arguments are the desired powers of the fields
+*     First deal with some primitives (heavily version-dependent!)
+*     Current implementation is for the simple mesonic + QED ChPT.
+    #if ((`BBLOCK'==chi)||(`BBLOCK'==chidag))&&(`RANK'==0)
+        #ifndef `DRYRUN'
+            id bb?{chi,chidag}(Nm?,Nv?) = chi * delta_(Nm,0) * delta_(Nv,0);
+        #endif
+    #elseif ((`BBLOCK'==chitil)||(`BBLOCK'==chitildag))&&(`RANK'==0)
+        #ifndef `DRYRUN'
+*             chi-tilde simplifies to chi^(Nf-1) in the equal-mass case
+            id bb?{chitil,chitildag}(Nm?,Nv?) =
+                #if (isdefined(PKEMASS)==0)&&(isdefined(FULLMASS)==0)&&(isdefined(NFGENERAL)==0)
+                    chi^{`NF'-1}
+                #else
+                    chitil
+                #endif
+                * delta_(Nm,0) * delta_(Nv,0);
+        #endif
+    #elseif (`BBLOCK'==lr)&&(`RANK'==1)
+        #ifndef `DRYRUN'
+            id l?{l,r}(Nm?,Nv?,mu?) = v(mu) * delta_(Nm,0) * delta_(Nv,1);
+        #endif
+    #else
+        #do NM=0,`NNM'
+            #do NV=0,`NNV'
+                #include- names.hf
+                #ifndef `NOMAKE'
+                    #system `MAKECMD' BBLOCK=`BBLOCK' RANK=`RANK' `BBLOCKFILE'
+                #endif
+                #ifndef `DRYRUN'
+                    #message[substitute]~~~ substituting `BBLOCK'(`NM',`NV'`INDICES')
+                    id `BBLOCK'(`NM',`NV'`INDICES') =
+                        #include- `BBLOCKFILE'
+                        ;
+                #endif
+            #enddo
+        #enddo
+    #endif
+#endprocedure
+
+cfunction trPhi;
+functions tr,trL,trR, dL,dR;
+functions bb, Phi,l,r,chi,chidag,v,`BBLOCKS';
+functions h,gL,gR, hdag,gLdag,gRdag;
+function ipart;
+symbols Nm,Nv;

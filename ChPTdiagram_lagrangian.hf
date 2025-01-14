@@ -1,0 +1,19 @@
+* Contains the whole ChPT Lagrangian at order O(p^`NP')
+
+#procedure pXterm(IN,NN,I3,N3,I2,N2)
+    #ifdef `NFGENERAL'
+        #if `IN' == X
+            + 0 *
+        #else
+            + `NN'`IN' *
+        #endif
+    #else
+        #if `I`NF'' == X
+            + 0 *
+        #else
+            + `N`NF''`I`NF'' *
+        #endif
+    #endif
+#endprocedure
+
+#include ChPTdiagram_p`NP'lagrangian.hf

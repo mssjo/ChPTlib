@@ -1,0 +1,231 @@
+#ifndef `CHPTDIAGRAMDEFSHF'
+#define CHPTDIAGRAMDEFSHF
+
+* Definitions for the ChPT diagram library
+
+#call require(NEXT)
+
+symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
+#define LECS "B0,F,Fpi"
+
+#ifdef `GENPAR'
+    cfunction a;
+    autodeclare symbol a;
+*     symbols a3,a12,a5,a32,a23,a14,a122,a7,a52,a43,a34,a322,a25,a232,a16,a142,a133,a1222;
+#endif
+#ifdef `KALPAR'
+    #define NF "2"
+#endif
+
+#ifdef `PKEMASS'
+    #define NF "3"
+    cfunctions propmatrix, Prop,Prop8,Prop88;
+    symbols mhat,ms;
+    symbols mp2,mk2,me2, m0p2,m0k2,m0e2;
+#else
+    #define EQUALMASS
+    symbols mp2, m0p2;
+#endif
+
+#ifdef `SQED'
+    symbols e, lambda;
+    function oppositeparity;
+    cfunctions delZ,delM,delA,delE,delEE,delL;
+#endif
+
+#ifndef `NF'
+    #define NFGENERAL
+    #define NF "Nf"
+    symbol Nf;
+#else
+    #if `NF'>3
+        #define NFGENERAL
+    #endif
+#endif
+
+
+#ifdef `LOOPMOMENTA'
+    #do L={`LOOPMOMENTA'}
+        vector `L';
+        symbol [`L'^2-M^2];
+    #enddo
+    set loopmomenta:
+        #do L={`LOOPMOMENTA'}
+            ,`L'
+        #enddo
+        ;
+#else
+    #define LOOPMOMENTA "ell"
+#endif
+
+#ifndef `PROPMOMENTA'
+    #define PROPMOMENTA "`LOOPMOMENTA'"
+#endif
+#do Q={`PROPMOMENTA'}
+    vector `Q';
+#enddo
+
+#ifdef `INTMOMENTA'
+    #do Q={`INTMOMENTA'}
+        vector `Q';
+        symbol `Q'sq;
+        #do L={`LOOPMOMENTA'}
+            vector [`L'+`Q'], [`L'-`Q'], [`Q'-`L'];
+            symbol [(`L'+`Q')^2-M^2],[(`L'-`Q')^2-M^2];
+            #redefine PROPMOMENTA "[`L'+`Q'],[`L'-`Q'],[`Q'-`L'],`PROPMOMENTA'"
+        #enddo
+    #enddo
+#endif
+
+set loops: `LOOPMOMENTA';
+
+* Display preprocessor variables, but importantly do this BEFORE all the LECs and stuff are added
+#ifndef `QUIET'
+    #show
+#endif
+
+
+#ifdef `NFGENERAL'
+    #define NLOLECS "<L0,L0r>,...,<L10,L10r>,H1,H2,H1r,H2r"
+    #define NNLOLECS "<K1,K1r>,...,<K115,K115r>,<Kt1>,...,<Kt16>"
+    #define N3LOLECS "<K8x1,K8r1>,...,<K8x1862,K8r1862>"
+#else
+    #if `NF'==3
+        #define NLECxNNLO "94"
+        #define NLOLECS "<L0,L0r>,...,<L10,L10r>,H1,H2,H1r,H2r"
+        #define NNLOLECS "<C1,C1r>,...,<C94,C94r>,<Ct1>,...,<Ct16>"
+        #define N3LOLECS "<C8x1,C8r1>,...,<C8x1254,C8r1254>"
+    #elseif `NF'==2
+        #define NLOLECS "<l1,l1r,l1b>,...,<l8,l8r,l8b>,<L0>,...,<L10>,H1,H2,h1,h2,h3,h1r,h2r,h3r"
+        #define NNLOLECS "<c1,c1r>,...,<c57,c57r>,<ct1>,...,<ct10>"
+        #define N3LOLECS "<c8x1,c8r1>,...,<c8x475,c8r475>"
+    #endif
+#endif
+* Generic dummy LECs
+#define DUMMYLECS "p4LEC,p6LEC,p8LEC"
+symbols `DUMMYLECS';
+* All LECs
+#ifdef `ORDER'
+    #if `ORDER'>=4
+        #redefine LECS "`LECS',`NLOLECS'"
+    #endif
+    #if `ORDER'>=6
+        #redefine LECS "`LECS',`NNLOLECS'"
+    #endif
+    #if `ORDER'>=8
+        #redefine LECS "`LECS',`N3LOLECS'"
+    #endif
+#else
+    #redefine LECS "`LECS',`NLOLECS',`NNLOLECS',`N3LOLECS'"
+#endif
+symbols `LECS';
+set LECs: `LECS';
+
+#include- defaultext.hf
+
+symbols Nf,d;
+
+functions Q, Phi;
+functions tr,chi;
+cfunctions Tr(cyclic), phi, A;
+indices mu,nu,ro,si,ka,la,al,be;
+set lorentz: mu,nu,ro,si,ka,la,al,be;
+symbols <n1>,...,<n`NEXT'>, <m1>,...,<m`NEXT'>;
+symbols sqrt2,sqrt3,sqrt6;
+cfunction coeff;
+
+cfunctions prop,halfprop, oprop,iprop;
+functions assign, kaons, derivs, gaugederivs, numerator, dummy;
+symbols gauge,gamma;
+cfunctions sum, prod, repeat, vecsum, sqsum, invsqsum;
+cfunctions pickout, delt,elim, negate;
+
+
+function ext;
+vectors <ext1>,...,<ext`NEXT'>;
+set external: <ext1>,...,<ext`NEXT'>;
+symbols [d], <[d-1]>,...,<[d-4]>;
+symbols kappa,L, eps,etil, log4pi;
+
+cfunctions tadpole, bubble, triangle;
+#define LOOPS "
+    A,
+    Ab,
+    B, B1, B21,B22, B31,B32,
+    Bb, B1b, B21b,B22b, B31b,B32b,
+    C, Cx11,Cx12,Cx13, Cx21,Cx22,Cx23, Cx31,
+    H, HH1, H21,H22,H23,H24,
+    V, VV,
+    Jbar"
+cfunctions `LOOPS';
+
+function cross, mirror, cycle, permute, replace;
+function bookkeep;
+
+vectors p,q,k, p0,p1,p2,p3,p4;
+symbol qsq, q1sq,q2sq,q3sq, beta;
+indices i,j;
+symbols m,n, sgn,mark;
+symbols m1,...,m4;
+symbol pi;
+
+#ifndef `NOMANDEL'
+    symbols s,t,u, [s-t],[t-u],[u-s], [t-s],[u-t],[s-u], [s+t],[t+u],[u+s], [t+s],[u+t],[s+u];
+    set mandel: s,t,u, [s-t],[t-u],[u-s], [t-s],[u-t],[s-u], [s+t],[t+u],[u+s], [t+s],[u+t],[s+u];
+#endif
+
+symbol [transverse];
+symbol [BEWARE];
+
+#ifdef `NEXT'
+    indices flav,<f1=Nf>,...,<f`NEXT'=Nf>;
+    set extflav: <f1>,...,<f`NEXT'>;
+    vectors <p1>,...,<p`NEXT'>;
+    set extmomenta: <p1>,...,<p`NEXT'>;
+
+    indices <i1>,...,<i{`NEXT'*2}>;
+    vectors <q1>,...,<q{`NEXT'*2}>;
+
+    #if `NEXT' <= 4
+        set extlorentz: mu,nu,ro,si;
+    #else
+        indices <mu1>,...,<mu`NEXT'>;
+        set extlorentz: <mu1>,...,<mu`NEXT'>;
+    #endif
+#endif
+
+cfunctions int,int2;
+
+#define INITREPEAT "if(count(repeat,1)==0) multiply repeat(0);"
+#define SETREPEAT "id repeat(0) = repeat(1);"
+#define UNSETREPEAT "id repeat(1) = repeat(0);"
+#define IFREPEAT "id repeat(0) = 1; if(match(repeat(1))); id repeat(1) = 1;"
+
+* #procedure sums
+*
+*     id sqsum(?Q) * invsqsum(?Q) = 1;
+*
+*     repeat;
+*         id vecsum(p1?,p2?, ?Q, mu?) = vecsum(p1+p2, ?Q, mu);
+*         id vecsum(p1?,p2?, ?Q, q?) = vecsum(p1+p2, ?Q, q);
+*         id sum?{sum,sqsum}(p1?,p2?, ?Q) = sum(p1+p2, ?Q);
+*     endrepeat;
+*
+*     id vecsum(p?, mu?) = p(mu);
+*     id vecsum(p?, q?) = p.q;
+*     id sqsum(q?) = q.q;
+*     id invsqsum(q?) = 1/(q.q);
+* #endprocedure
+
+
+#procedure stdbracket
+    bracket i_,Tr,`LECS',`LOOPS', F,Fpi, int,prop
+        #ifdef `SQED'
+            ,e,lambda
+        #endif
+        ;
+#endprocedure
+
+
+
+#endif

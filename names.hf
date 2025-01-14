@@ -1,0 +1,84 @@
+* Reads program options and defines preprocessor variables for
+* - naming expressions, especially vertices
+* - naming save files
+* - calling external programs with the same options
+
+#include dirs.hf
+
+#define NAMESUFFIX ""
+
+#define FORMOPTS ""
+#define MAKEOPTS ""
+#ifdef `NM'
+    #ifdef `NV'
+        #ifdef `NP'
+            #define HASINFO "1"
+            #redefine FORMOPTS "-d NM=`NM' -d NV=`NV' -d NP=`NP'"
+            #redefine MAKEOPTS "NM=`NM' NV=`NV' NP=`NP'"
+        #endif
+    #endif
+#endif
+
+#ifdef `NFGENERAL'
+    #redefine MAKEOPTS "`MAKEOPTS' NFGENERAL=1"
+#else
+    #redefine NAMESUFFIX "`NAMESUFFIX'NF`NF'"
+    #redefine FORMOPTS "`FORMOPTS' -d NF=`NF'"
+    #redefine MAKEOPTS "`MAKEOPTS' NF=`NF'"
+#endif
+#ifdef `CAYHAM'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_CAYHAM"
+    #redefine FORMOPTS "`FORMOPTS' -d CAYHAM"
+    #redefine MAKEOPTS "`MAKEOPTS' CAYHAM=1"
+#endif
+#ifdef `KALPAR'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_KALPAR"
+    #redefine FORMOPTS "`FORMOPTS' -d KALPAR"
+    #redefine MAKEOPTS "`MAKEOPTS' KALPAR=1"
+#endif
+#ifdef `GENPAR'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_GENPAR"
+    #redefine FORMOPTS "`FORMOPTS' -d GENPAR"
+    #redefine MAKEOPTS "`MAKEOPTS' GENPAR=1"
+#endif
+#ifdef `TRF'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_TRF"
+    #redefine FORMOPTS "`FORMOPTS' -d TRF"
+    #redefine MAKEOPTS "`MAKEOPTS' TRF=1"
+#endif
+#ifdef `PKEMASS'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_PKE"
+    #redefine FORMOPTS "`FORMOPTS' -d PKEMASS"
+    #redefine MAKEOPTS "`MAKEOPTS' PKEMASS=1"
+#endif
+#ifdef `TRANSFORM'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_`TRANSFORM'TRANSF"
+    #redefine FORMOPTS "`FORMOPTS' -d TRANSFORM=`TRANSFORM'"
+    #redefine MAKEOPTS "`MAKEOPTS' TRANSFORM=`TRANSFORM'"
+#endif
+
+#define MAKECMD "make --no-print-directory `MAKEOPTS'"
+#ifdef `FORCEMAKE'
+    #redefine MAKECMD "`MAKECMD' -B"
+#endif
+
+#ifdef `NAME'
+    #define SAVEDIR "`LOCALDIR'/save"
+    #define SAVENAME "`SAVEDIR'/`NAME'`NAMESUFFIX'"
+#endif
+
+#define BBLOCKDIR "`CHPTDIR'/bblocks"
+#define BBLOCKNAME "bb`NAMESUFFIX'"
+
+#ifdef `HASINFO'
+    #define FIELDINFO "M`NM'V`NV'"
+    #define POWERINFO "`FIELDINFO'P`NP'"
+
+    #define VERTEXDIR "`CHPTDIR'/vertices"
+    #define VERTEXNAME "`POWERINFO'`NAMESUFFIX'"
+    #define VERTEXFILE "`VERTEXDIR'/`VERTEXNAME'.hf"
+
+    #ifdef `BBLOCK'
+        #define BBLOCKFILE "`BBLOCKDIR'/`BBLOCKNAME'/`BBLOCK'`RANK'`FIELDINFO'.hf"
+    #endif
+#endif

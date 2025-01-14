@@ -1,0 +1,53 @@
+
+* NLO renormalization
+* Taken from
+*  - general Nf: Bijnens, Colangelo & Ecker 1999
+*  - Nf=3: Gasser & Leutwyler 1984
+*  - Nf=2: Gasser & Leutwyler 1983
+
+
+#procedure renormNLO(LEC,GAMMA)
+    id `LEC' = [(cmu)^(d-4)] * (`LEC'r + (`GAMMA') * Lambda);
+#endprocedure
+
+#ifdef `NFGENERAL'
+    #call renormNLO(L0,`NF'/48)
+    #call renormNLO(L1,1/16)
+    #call renormNLO(L2,1/8)
+    #call renormNLO(L3,`NF'/24)
+    #call renormNLO(L4,1/8)
+    #call renormNLO(L5,`NF'/8)
+    #call renormNLO(L6,(`NF'^2+2)/(16*`NF'^2))
+    #call renormNLO(L7,0)
+    #call renormNLO(L8,(`NF'^2-4)/(16*`NF'))
+    #call renormNLO(L9,`NF'/12)
+    #call renormNLO(L10,-`NF'/12)
+    #call renormNLO(H1,-`NF'/24)
+    #call renormNLO(H2,(`NF'^2-4)/(8*`NF'))
+#elseif `NF'==3
+    #call renormNLO(L1,3/32)
+    #call renormNLO(L2,3/16)
+    #call renormNLO(L3,0)
+    #call renormNLO(L4,1/8)
+    #call renormNLO(L5,3/8)
+    #call renormNLO(L6,11/144)
+    #call renormNLO(L7,0)
+    #call renormNLO(L8,5/48)
+    #call renormNLO(L9,1/4)
+    #call renormNLO(L10,-1/4)
+    #call renormNLO(H1,-1/8)
+    #call renormNLO(H2,5/24)
+#elseif `NF'==2
+    #call renormNLO(l1,1/3)
+    #call renormNLO(l2,2/3)
+    #call renormNLO(l3,-1/2)
+    #call renormNLO(l4,2)
+    #call renormNLO(l5,-1/6)
+    #call renormNLO(l6,-1/3)
+    #call renormNLO(l7,0)
+*     TODO: check these, since Gasser&Leutwyler use weird conventions
+*     The -1/12 is deduced from what makes the NLO HVP work
+    #call renormNLO(h1,-1/12)
+    #call renormNLO(h2,0)
+    #call renormNLO(h3,2)
+#endif

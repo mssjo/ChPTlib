@@ -1,0 +1,47 @@
+
+* The ChPT lagrangian at NLO (order p^4)
+
+#procedure p4term(IN,I3,I2)
+    #call pXterm(`IN',Lhat,`I3',L,`I2',X)
+#endprocedure
+
+*** First building block version
++ L0 * tr(Udag(mu), U(nu), Udag(mu), U(nu))
++ L1 * tr(Udag(mu), U(mu)) * tr(Udag(nu), U(nu))
++ L2 * tr(Udag(mu), U(nu)) * tr(Udag(mu), U(nu))
++ L3 * tr(Udag(mu), U(mu), Udag(nu), U(nu))
++ L4 * tr(Udag(mu), U(mu)) * (tr(Udag, chi) + tr(chidag, U))
++ L5 * (tr(Udag(mu), U(mu), Udag, chi) + tr(Udag(mu), U(mu), chidag, U))
++ L6 * (tr(Udag, chi) + tr(chidag, U))^2
++ L7 * (tr(Udag, chi) - tr(chidag, U))^2
++ L8 * (tr(chidag, U, chidag, U) + tr(Udag, chi, Udag, chi))
+- i_*L9 * (tr(FR(mu,nu), U(mu), Udag(nu)) + tr(FL(mu,nu), Udag(mu), U(nu)))
++ L10 * tr(Udag, FR(mu,nu), U, FL(mu,nu))
++ H1 * (tr(FR(mu,nu), FR(mu,nu)) + tr(FL(mu,nu), FL(mu,nu)))
++ H2 * tr(chidag, chi)
+*** Main building block version
+* + L0 * (tr(u(mu),u(nu),u(mu),u(nu)))
+* + L1 * (tr(u(mu),u(mu))*tr(u(nu),u(nu)))
+* + L2 * (tr(u(mu),u(nu))*tr(u(mu),u(nu)))
+* + L3 * (tr(u(mu),u(mu),u(nu),u(nu)))
+* + L4 * (tr(u(mu),u(mu))*tr(chip))
+* + L5 * (tr(u(mu),u(mu),chip))
+* + L6 * (tr(chip)*tr(chip))
+* + L7 * (tr(chim)*tr(chim))
+* + L8/2 * (tr(chip,chip) + tr(chim,chim))
+* + L9 * ( - tr(u(mu),u(nu),fp(mu,nu))*i_)
+* + L10/4 * (tr(fp(mu,nu),fp(mu,nu)) - tr(fm(mu,nu),fm(mu,nu)))
+* + H1/2 * (tr(fp(mu,nu),fp(mu,nu)) + tr(fm(mu,nu),fm(mu,nu)))
+* + H2/4 * (tr(chip,chip) - tr(chim,chim))
+#ifdef `NF'
+    #if `NF'==2
+*         TODO: check normalization
+        + h3 * (      tr( chidag, chitil ) + tr( chi, chitildag )        ) / 2
+    #endif
+#endif
+
+*     Not assuming tr(f) = 0 (these only give contact terms, and only differ from H2 by tr(Q^2) -> tr(Q)^2)
+* #ifdef `TRF'
+*     + Lt1 * (tr(fp(mu,nu))*tr(fp(mu,nu)))
+*     + Lt2 * (tr(fm(mu,nu))*tr(fm(mu,nu)))
+* #endif
