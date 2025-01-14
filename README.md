@@ -8,4 +8,4 @@ $ python3 ChPTdiagram.py help
 ```
 for further instructions, and inspect the generated code for guidance on how to use the FORM library.
 
-Requires python 3, FORM (https://www.nikhef.nl/~form/) and my Python library for permutations.
+Requires python 3, FORM (https://www.nikhef.nl/~form/) and my Python library for permutations (https://github.com/mssjo/permute/).
