@@ -21,15 +21,15 @@ $(BBLOCKDIR)/rhs/%on$(NB).hf : ipart/%f$(NB).hf $(BBLOCKDIR)/rhs.sh
 	mkdir -p $(BBLOCKDIR)/rhs
 	$(BBLOCKDIR)/rhs.sh $* $(NB)
 
-ipart/%u.hf : ipart.py
+ipart/%u.hf :
 	mkdir -p ipart
-	python3 ipart.py $* u
-ipart/%o.hf : ipart.py
+	ipart -uF $*
+ipart/%o.hf :
 	mkdir -p ipart
-	python3 ipart.py $* o
-ipart/%f$(NB).hf : ipart.py
+	ipart -oF $*
+ipart/%f$(NB).hf :
 	mkdir -p ipart
-	python3 ipart.py $* f $(NB)
+	ipart -F -f $(NB) $*
 
 
 .PHONY: clean
