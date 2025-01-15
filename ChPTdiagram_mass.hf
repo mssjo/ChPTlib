@@ -1,3 +1,5 @@
+* TODO: merge with ChPTdiagram_external.hf
+
 #procedure setkaons(EXPR,NKPAIR)
 
     .sort

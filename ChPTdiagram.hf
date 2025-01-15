@@ -31,11 +31,8 @@
 
 #include- ChPTdiagram_vertex.hf
 #include- ChPTdiagram_diagram.hf
-#include- ChPTdiagram_loops.hf
 #include- ChPTdiagram_renorm.hf
 #include- ChPTdiagram_amplitude.hf
 #include- ChPTdiagram_external.hf
-
-#include- checkNP.hf
 
 #endif

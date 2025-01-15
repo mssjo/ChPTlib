@@ -1,4 +1,7 @@
+#ifndef `CHPTDIAGRAMUTILSHF'
+#define CHPTDIAGRAMUTILSHF
 
+* Require parameters to be passed to FORM
 #procedure require(PARAM)
     #ifndef ``PARAM''
         #message[require]~~~ ERROR: parameter `PARAM' must be defined
@@ -11,6 +14,8 @@
     #endif
 #endprocedure
 
+* Storing and retrieving expressions
+* (convenience wrapper around the builtins)
 #procedure store(NAME)
     #include- names.hf
     #create <`SAVENAME'_list.hf>
@@ -36,3 +41,12 @@
     #message[restore]~~~ Restoring `NAME' to active expressions ("x" appended to names)
     #include+ `SAVENAME'_restore.hf
 #endprocedure
+
+
+* For conditional repetition
+#define INITREPEAT "if(count(repeat,1)==0) multiply repeat(0);"
+#define SETREPEAT "id repeat(0) = repeat(1);"
+#define UNSETREPEAT "id repeat(1) = repeat(0);"
+#define IFREPEAT "id repeat(0) = 1; if(match(repeat(1))); id repeat(1) = 1;"
+
+#endif

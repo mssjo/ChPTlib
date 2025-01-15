@@ -2,122 +2,20 @@
 #define CHPTDIAGRAMDIAGRAMHF
 
 * Procedures related to building diagrams from vertices
+* NOTE: this used to be a more extensive library, but has mostly been supplanted
+*  by the more direct, efficient and less buggy diagram-building provided by
+*  generated diagram files as opposed to handwritten ones
 
 #include- ChPTdiagram_defs.hf
 
 *************************************************************************************************
 
-#procedure assemble(EXPR,NPROP)
-    .sort
-    skip; nskip `EXPR';
-
-    id delt(f1?,f2?) = d_(f1,f2);
-
-    #call joinprops(`EXPR',`NPROP')
-
-    .sort
-    skip; nskip `EXPR';
-
-    #do Q={`PROPMOMENTA'}
-        repeat id `Q'.`Q' * prop(mp2?,`Q') = 1 + mp2 * prop(mp2,`Q');
-    #enddo
-
-    #ifdef `NOINT'
-        id int(q?{`LOOPMOMENTA'}) = 1;
-    #endif
-#endprocedure
-
-*************************************************************************************************
-
-#procedure joinprops(EXPR,NPROP)
-    .sort
-    skip; nskip `EXPR';
-
-*   Decrement unmatched propagator-distinguishing indices until they match
-*   This allows for cases where there are fewer propagators around than the vertices were set up for
-    repeat;
-*         Protect matching indices
-        id iprop(n1?pos_, q?,?a) * oprop(n1?pos_, q?,?b)
-            = iprop(-1,n1, q,?a) * oprop(-1,n1, q,?b);
-*         Between two nonmatching indices, decrement the higher one
-        id iprop(n1?pos_, q?,?a) * oprop(n2?pos_, q?,?b)
-            = iprop(n1-1, q,?a) * oprop(n2  , q,?b) * theta_(n1-n2)
-            + iprop(n1  , q,?a) * oprop(n2-1, q,?b) * theta_(n2-n1);
-    endrepeat;
-*     Remove protection
-    id prop?{iprop,oprop}(-1,n?pos_, ?q) = prop(n, ?q);
-
-*     Enact explicit replacements (obsolete by the above feature)
-*     repeat;
-*         repeat id replace(n1?int_,n2?int_,?nn) * prop?{iprop,oprop}(n1?, ?q) = replace(n1,n2, ?nn) * prop(n2, ?q);
-*         id replace(n1?int_,n2?int_,?nn) = replace(?nn);
-*     endrepeat;
-*     id replace(n1?int_,n2?int_) = 1;
-
-*   Join half-props to full props
-
-    #do I=1,`NPROP'
-        #ifdef `PKEMASS'
-
-*           Distinct pion/kaon/eta masses
-            id,once iprop(?q, i?) * oprop(?q, j?)
-                = i_ * (
-                    Tr(i,j) * Prop(?q)
-                    + (Tr(i,j,8) + Tr(j,i,8)) * Prop8(?q)
-                    + Tr(i,8) * Tr(j,8) * Prop88(?q)
-                );
-
-*             Remove propagator-distinguishing index
-            id Prop?{Prop,Prop8,Prop88}(n?int_, ?q) = Prop(?q);
-
-            id Prop(?q)   = 1/3     * (prop(mp2, ?q) + 2*prop(mk2, ?q));
-            id Prop8(?q)  = 2/sqrt6 * (prop(mp2, ?q) -   prop(mk2, ?q));
-            id Prop88(?q) = 1/3     * (prop(mp2, ?q) - 4*prop(mk2, ?q)) + prop(me2, ?q);
-
-        #else
-
-            #ifdef `SQED'
-*                 Enforce phi-phi* contractions
-                id,once iprop(?q, i?, m?) * oprop(?q, j?, n?)
-                    = i_ * prop(?q) * oppositeparity(m,n);
-                id oppositeparity(m?even_,n?odd_) = 1;
-                id oppositeparity(m?odd_,n?even_) = 1;
-                id oppositeparity(m?,n?) = 0;
-            #else
-*                 Normal ChPT contraction
-                id,once iprop(?q, i?) * oprop(?q, j?)
-                    = i_ * prop(?q) * d_(i,j);
-            #endif
-
-*             Remove propagator-distinguishing indexPasiecznik
-            id prop(n?int_, ?q) = prop(?q);
-*             Endow propagators with mass if not already present
-            id prop(q?) = prop(mp2,q);
-
-        #endif
-
-        #call dotrace(`EXPR')
-
-        .sort:>>join prop `I'<<;
-        skip; nskip `EXPR';
-
-    #enddo
-
-    if(match(prop?{iprop,oprop}(?q)));
-        print "In term %T:";
-        exit "Failed to join all propagators!";
-    endif;
-
-    #if `NPROP' == 0
-        #call dotrace(`EXPR')
-    #endif
-
-
-#endprocedure
-
-
-*************************************************************************************************
-
+* Contract all internal flavor indices. Involves the following:
+*  - Fierz identity
+*  - misc. Lie algebra
+*  - charge and mass matrix
+*  - PKE mass propagator matrix handling
+*  - NOT full-mass considerations
 #procedure dotrace(EXPR)
     .sort
     skip; nskip `EXPR';
@@ -192,19 +90,12 @@
         id Nf = `NF';
         id 1/Nf = 1/`NF';
 
+*         NOTE: Lagrangian assumes Tr(Q) = 0, so 2-flavor values, while
+*           techincally correct, are inconsistent.
         #ifndef `KEEPTRQ'
             #if `NF'==2
                 id Tr(Q) = 1/3;
                 id Tr(Q,Q) = 5/9;
-
-* *                 Also isospin limit-specific
-*                 id B0*Tr(M) = M^2;
-*                 id B0*Tr(M,Q) = M^2/6;
-*                 id B0*Tr(M,Q,Q) = M^2 * 5/18;
-*                 id B0^2*Tr(M,M) = M^4/2;
-*                 id B0^2*Tr(M,M,Q) = M^4 * 1/12;
-*                 id B0^2*Tr(M,M,Q,Q) = M^4 * 5/36;
-*                 id B0^2*Tr(M,Q,M,Q) = M^4 * 5/36;
             #elseif `NF'==3
                 id Tr(Q) = 0;
                 id Tr(Q,Q) = 2/3;
@@ -226,118 +117,5 @@
     .sort:>>dotrace `EXPR'<<;
 
 #endprocedure
-
-
-*************************************************************************************************
-
-* #procedure simplifyloops(EXPR)
-*     #do L=`LOOPMOMENTA'
-*         #do LOOP=1,1
-*             #message Looping `L'
-* *             #call usesymmetry(`EXPR',`L')
-*             #call canceldenoms(`EXPR',`L')
-*
-*             `IFREPEAT'
-*                 redefine LOOP "0";
-*             endif;
-*             .sort
-*         #enddo
-*     #enddo
-* #endprocedure
-*
-* #procedure usesymmetry(EXPR,L)
-*     .sort
-*     skip; nskip `EXPR';
-* *     Use symmetry to replace loop momentum tensors by products
-*
-*
-*     #ifdef `DEBUG'
-*         print +s;
-*         .sort:>>DB usesymmetry<<;
-*     #endif
-*
-*     `INITREPEAT'
-*
-*     multiply numerator();
-*     repeat;
-*         id numerator(?a) * `L'(mu?) = numerator(?a, mu);
-*         id numerator(?a) * `L'.p?!{`L',} = numerator(?a, p);
-*     endrepeat;
-*     id numerator() = 1;
-*     id numerator(?a) = numerator(nargs_(?a), ?a);
-*
-*     if(0);
-*         label error;
-*         exit "Too high power of `L' in numerator!";
-*     endif;
-*     if(0);
-*         label continue1;
-*         `SETREPEAT'
-*     endif;
-*
-*     id,ifmatch->continue1 numerator(n?odd_, ?a) = 0;
-*     id,ifmatch->error numerator(n?{>6}, ?a) = 0;
-*     #define D "4"
-*     id,ifmatch->continue1 numerator(6, ?a) = 1/{`D'*{`D'+2}*{`D'+4}} * (`L'.`L')^3 * dd_(?a);
-*     id,ifmatch->continue1 numerator(4, ?a) = 1/{`D'*{`D'+2}} * (`L'.`L')^2 * dd_(?a);
-*     id,ifmatch->continue1 numerator(2, ?a) = 1/{`D'} * (`L'.`L') * d_(?a);
-*     #undefine D
-*
-*     .sort:>>usesymmetry<<;
-* #endprocedure
-*
-* #procedure canceldenoms(EXPR,L)
-*     .sort
-*     skip; nskip `EXPR';
-* *     Cancel denominators
-*
-*     #ifdef `DEBUG'
-*         print +s;
-*         .sort:>>DB canceldenoms<<;
-*         skip; nskip `EXPR';
-*     #endif
-*
-*     `INITREPEAT'
-*
-*     if(0);
-*         label continue2;
-*         `SETREPEAT'
-*     endif;
-*
-*     id,ifmatch->continue2 `L'.`L' * prop(`L')
-*         = 1 +  Mpi^2 * prop(`L');
-*     #do SL={+`L',-`L'}
-*         id,ifmatch->continue2 `L'.`L' * prop(?a, `SL', ?b)
-*             = 1 - (2*vecsum(?a,?b, `SL') + sqsum(?a,?b) - Mpi^2) * prop(?a, `SL', ?b);
-*     #enddo
-*
-*    #call sums
-*
-*
-*     if(match(`L'.`L')) exit "ERROR: `L'^2 remaining";
-*
-*     .sort:>>canceldenoms<<;
-* #endprocedure
-
-
-* #procedure oneloop(EXPR,L)
-*     .sort
-*     skip; nskip `EXPR';
-* *     Identify one-loop integrals
-*
-*     id prop(`L',?a) * prop(`L') = i_*intB(`L',?a);
-*     id prop(`L',?a)             = i_*intA(`L',?a);
-*
-*     if(match(prop(`L',?a))||match(int?{intA,intB}(`L',?a,p?`LOOPMOMENTA',?b)));
-*         id intA(`L',?a) = prop(`L',?a);
-*         id intB(`L',?a) = prop(`L',?a) * prop(`L');
-*     else;
-*         id intA(`L',?a) = Mpi^2 * (kappa/epsb - LL);
-*         id intB(`L',?a) = (kappa/epsb - kappa - LL + Jbar(?a));
-*     endif;
-*
-*     .sort:>>oneloop<<;
-* #endprocedure
-
 
 #endif

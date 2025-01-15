@@ -2,6 +2,7 @@
 #define CHPTDIAGRAMEXTERNALHF
 
 * Procedures related to specifying external states
+* Something of a work in progress -- expect heavy revisions
 
 #include- ChPTdiagram_defs.hf
 

@@ -3,20 +3,28 @@
 
 * Definitions for the ChPT diagram library
 
+
+********************************************************************************
+* Setup, options and parameters
+
+* Number of external particles
 #call require(NEXT)
 
-symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
-#define LECS "B0,F,Fpi"
-
+* General parametrization from the sixmeson paper
 #ifdef `GENPAR'
     cfunction a;
-    autodeclare symbol a;
-*     symbols a3,a12,a5,a32,a23,a14,a122,a7,a52,a43,a34,a322,a25,a232,a16,a142,a133,a1222;
 #endif
+* Kalman's preferred parametrization (phi - sqrt(1 - phi^2))
 #ifdef `KALPAR'
     #define NF "2"
 #endif
 
+* Options for masses
+#ifdef `FULLMASS'
+    #message[ChPTdiagram]~~~ ERROR: full-mass ChPT not supported yet!
+    #terminate
+#endif
+* Three distinct masses: Pion, Kaon, Eta
 #ifdef `PKEMASS'
     #define NF "3"
     cfunctions propmatrix, Prop,Prop8,Prop88;
@@ -27,12 +35,15 @@ symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
     symbols mp2, m0p2;
 #endif
 
+* Scalar QED + phi^4 is a neat reskin of ChPT
 #ifdef `SQED'
+    #message[ChPTdiagram]~~~ WARNING: scalar QED not fully supported!
     symbols e, lambda;
     function oppositeparity;
     cfunctions delZ,delM,delA,delE,delEE,delL;
 #endif
 
+* Number of flavors
 #ifndef `NF'
     #define NFGENERAL
     #define NF "Nf"
@@ -43,6 +54,9 @@ symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
     #endif
 #endif
 
+
+********************************************************************************
+* Internal momenta
 
 #ifdef `LOOPMOMENTA'
     #do L={`LOOPMOMENTA'}
@@ -79,11 +93,17 @@ symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
 
 set loops: `LOOPMOMENTA';
 
+********************************************************************************
 * Display preprocessor variables, but importantly do this BEFORE all the LECs and stuff are added
 #ifndef `QUIET'
     #show
 #endif
 
+********************************************************************************
+* LECs
+
+symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
+#define LECS "B0,F,Fpi"
 
 #ifdef `NFGENERAL'
     #define NLOLECS "<L0,L0r>,...,<L10,L10r>,H1,H2,H1r,H2r"
@@ -121,31 +141,10 @@ symbols `DUMMYLECS';
 symbols `LECS';
 set LECs: `LECS';
 
-#include- defaultext.hf
+********************************************************************************
+* Loop integrals
 
-symbols Nf,d;
-
-functions Q, Phi;
-functions tr,chi;
-cfunctions Tr(cyclic), phi, A;
-indices mu,nu,ro,si,ka,la,al,be;
-set lorentz: mu,nu,ro,si,ka,la,al,be;
-symbols <n1>,...,<n`NEXT'>, <m1>,...,<m`NEXT'>;
-symbols sqrt2,sqrt3,sqrt6;
-cfunction coeff;
-
-cfunctions prop,halfprop, oprop,iprop;
-functions assign, kaons, derivs, gaugederivs, numerator, dummy;
-symbols gauge,gamma;
-cfunctions sum, prod, repeat, vecsum, sqsum, invsqsum;
-cfunctions pickout, delt,elim, negate;
-
-
-function ext;
-vectors <ext1>,...,<ext`NEXT'>;
-set external: <ext1>,...,<ext`NEXT'>;
-symbols [d], <[d-1]>,...,<[d-4]>;
-symbols kappa,L, eps,etil, log4pi;
+autodeclare cfunction int;
 
 cfunctions tadpole, bubble, triangle;
 #define LOOPS "
@@ -159,64 +158,63 @@ cfunctions tadpole, bubble, triangle;
     Jbar"
 cfunctions `LOOPS';
 
-function cross, mirror, cycle, permute, replace;
-function bookkeep;
+********************************************************************************
+* External particles
 
-vectors p,q,k, p0,p1,p2,p3,p4;
-symbol qsq, q1sq,q2sq,q3sq, beta;
-indices i,j;
-symbols m,n, sgn,mark;
-symbols m1,...,m4;
-symbol pi;
+#include- defaultext.hf
 
 #ifndef `NOMANDEL'
     symbols s,t,u, [s-t],[t-u],[u-s], [t-s],[u-t],[s-u], [s+t],[t+u],[u+s], [t+s],[u+t],[s+u];
     set mandel: s,t,u, [s-t],[t-u],[u-s], [t-s],[u-t],[s-u], [s+t],[t+u],[u+s], [t+s],[u+t],[s+u];
 #endif
 
-symbol [transverse];
-symbol [BEWARE];
+indices flav,<f1=Nf>,...,<f`NEXT'=Nf>;
+set extflav: <f1>,...,<f`NEXT'>;
+vectors <p1>,...,<p`NEXT'>;
+set extmomenta: <p1>,...,<p`NEXT'>;
 
-#ifdef `NEXT'
-    indices flav,<f1=Nf>,...,<f`NEXT'=Nf>;
-    set extflav: <f1>,...,<f`NEXT'>;
-    vectors <p1>,...,<p`NEXT'>;
-    set extmomenta: <p1>,...,<p`NEXT'>;
+indices <i1>,...,<i{`NEXT'*2}>;
+vectors <q1>,...,<q{`NEXT'*2}>;
 
-    indices <i1>,...,<i{`NEXT'*2}>;
-    vectors <q1>,...,<q{`NEXT'*2}>;
-
-    #if `NEXT' <= 4
-        set extlorentz: mu,nu,ro,si;
-    #else
-        indices <mu1>,...,<mu`NEXT'>;
-        set extlorentz: <mu1>,...,<mu`NEXT'>;
-    #endif
+#if `NEXT' <= 4
+    set extlorentz: mu,nu,ro,si;
+#else
+    indices <mu1>,...,<mu`NEXT'>;
+    set extlorentz: <mu1>,...,<mu`NEXT'>;
 #endif
 
-cfunctions int,int2;
+function ext;
+vectors <ext1>,...,<ext`NEXT'>;
+set external: <ext1>,...,<ext`NEXT'>;
 
-#define INITREPEAT "if(count(repeat,1)==0) multiply repeat(0);"
-#define SETREPEAT "id repeat(0) = repeat(1);"
-#define UNSETREPEAT "id repeat(1) = repeat(0);"
-#define IFREPEAT "id repeat(0) = 1; if(match(repeat(1))); id repeat(1) = 1;"
+********************************************************************************
+* Miscellaneous
 
-* #procedure sums
-*
-*     id sqsum(?Q) * invsqsum(?Q) = 1;
-*
-*     repeat;
-*         id vecsum(p1?,p2?, ?Q, mu?) = vecsum(p1+p2, ?Q, mu);
-*         id vecsum(p1?,p2?, ?Q, q?) = vecsum(p1+p2, ?Q, q);
-*         id sum?{sum,sqsum}(p1?,p2?, ?Q) = sum(p1+p2, ?Q);
-*     endrepeat;
-*
-*     id vecsum(p?, mu?) = p(mu);
-*     id vecsum(p?, q?) = p.q;
-*     id sqsum(q?) = q.q;
-*     id invsqsum(q?) = 1/(q.q);
-* #endprocedure
+indices mu,nu,ro,si,ka,la,al,be;
+set lorentz: mu,nu,ro,si,ka,la,al,be;
 
+functions Q, Phi;
+functions tr,chi;
+cfunctions Tr(cyclic), phi, A;
+symbols n, <n1>,...,<n`NEXT'>, m, <m1>,...,<m`NEXT'>;
+symbols sqrt2,sqrt3,sqrt6;
+
+cfunctions prop, coeff;
+functions kaons, derivs, dummy;
+
+symbols [d], <[d-1]>,...,<[d-4]>;
+symbols kappa,L, eps,etil, log4pi;
+
+function cross, mirror, cycle, permute, replace;
+
+vectors p,q,k, p0,p1,p2,p3,p4;
+symbol qsq, q1sq,q2sq,q3sq, beta;
+indices i,j;
+symbols sgn,mark;
+symbol pi;
+
+********************************************************************************
+* Standard bracket statement
 
 #procedure stdbracket
     bracket i_,Tr,`LECS',`LOOPS', F,Fpi, int,prop
@@ -225,7 +223,5 @@ cfunctions int,int2;
         #endif
         ;
 #endprocedure
-
-
 
 #endif
