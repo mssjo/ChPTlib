@@ -1,0 +1,6 @@
+* Default external indices
+#do J=1,`NEXT'
+    #ifndef `I`J''
+        #define I`J' "`J'"
+    #endif
+#enddo

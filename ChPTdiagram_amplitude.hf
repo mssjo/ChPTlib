@@ -1,0 +1,240 @@
+#ifndef `CHPTDIAGRAMAMPLITUDEHF'
+#define CHPTDIAGRAMAMPLITUDEHF
+
+* Procedures relating to building amplitudes from diagrams
+
+#include- ChPTdiagram_defs.hf
+
+
+*************************************************************************************************
+
+#procedure strip(EXPR)
+
+    .sort
+    skip; nskip `EXPR';
+
+*     Fix traces, multiply by bookkeeping function
+    id Tr(?a) = tr(?a);
+    multiply left bookkeep(0);
+
+        print +s;
+        .sort
+*     Discard any terms whose flavor indices are not in order
+    #do I=1,`NEXT'
+*         New trace
+        id,ifmatch->continue`I' bookkeep(?a, 0) * tr(f`I', ?b) = tr(f`I',?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b));
+*         Continuation of trace
+        id,ifmatch->continue`I' tr(?a, f`I', ?b) * bookkeep(?c, n?) = tr(?a, f`I', ?b) * bookkeep(?c, n-1) * delta_(n-1, nargs_(?b));
+
+        discard;
+
+        label continue`I';
+
+        print +s;
+        .sort:>> strip `I' <<;
+    #enddo
+*     Discard any terms whose traces are not in ascending order by size
+    repeat id bookkeep(m?!{0,},n?!{0,}, ?a) = bookkeep(n, ?a, m-n);
+    id bookkeep(n?, 0, ?a, m?pos_, ?b) = 0;
+
+*     Restore remaining terms
+    id bookkeep(?a) = 1;
+    id tr(?a) = Tr(?a);
+
+    .sort:>>strip<<;
+
+#endprocedure
+
+#procedure stripK(EXPR,NKPAIR)
+
+    #if `NKPAIR'==0
+        #call strip(`EXPR')
+    #else
+
+* Variant that supports external kaons.
+* Ordering of indices is independent of whether it's a pion or a kaon.
+* Additional rules are:
+*  1. KIp must come before KIm for each kaon pair I
+*  2. KIp must come before KJp if I<J
+*  3. If a trace contains at least one kaon, the last flavor in the trace must be a kaon.
+
+    .sort
+    skip; nskip `EXPR';
+
+* *     Shortcoming: will sometimes keep multiple versions that are related under Kp <-> Km
+* *     but it's hard to figure that out. The below tryreplace does NOT work.
+*     #do I=1,`NKPAIR'
+*         tryreplace K`I'p,K`I'm, K`I'm,K`I'p;
+*     #enddo
+*     .sort
+*     skip; nskip `EXPR';
+
+*     Fix traces, multiply by bookkeeping function
+*     The second one enforces rules 1 and 2, the last one rule 3.
+    id Tr(?a) = tr(?a);
+    multiply left bookkeep(0) * bookkeep() * bookkeep();
+
+        print +s;
+        .sort
+*     Discard any terms whose flavor indices are not in order
+    #do I=1,`NEXT'
+*         Trace contains kaon but last flavor isn't a kaon -> rule 3 violated
+        id,ifmatch->cont`I' tr(?b, f`I') * bookkeep(?a) * bookkeep(?K) * bookkeep(K1p?, ?k) = 0;
+
+*         New trace (clear rule 3 enforcer)
+        id,ifmatch->cont`I' bookkeep(?a, 0) * bookkeep(?K) * bookkeep(?k) * tr(f`I',?b)
+            = tr(f`I',?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b)) * bookkeep(?K) * bookkeep();
+        id,ifmatch->cont`I' bookkeep(?a, 0) * bookkeep(?K) * bookkeep(?k) * tr(K1p?Kx(f`I'), ?b)
+            = tr(K1p(f`I'),?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b)) * bookkeep(?K, K1p) * bookkeep(K1p);
+
+*         Continuation of trace
+        id,ifmatch->cont`I' tr(?a, f`I', ?b) * bookkeep(?c, n?) * bookkeep(?K) * bookkeep(?k)
+            = tr(?a, f`I', ?b) * bookkeep(?c, n-1) * bookkeep(?K) * bookkeep(?k) * delta_(n-1, nargs_(?b));
+        id,ifmatch->cont`I' tr(?a, K1p?Kx(f`I'), ?b) * bookkeep(?c, n?) * bookkeep(?K) * bookkeep(?k)
+            = tr(?a, K1p(f`I'), ?b) * bookkeep(?c, n-1) * bookkeep(?K, K1p) * bookkeep(?k, K1p) * delta_(n-1, nargs_(?b));
+
+        discard;
+
+        label cont`I';
+
+        print +s;
+        .sort:>> strip K `I' <<;
+    #enddo
+
+* *     Enforce rules 1 and 2 (discard unneeded enforcers)
+    id bookkeep(?a) * bookkeep(?b) * bookkeep(?c) = bookkeep(?a) * bookkeep(?b);
+    #do I=1,`NKPAIR'
+        id bookkeep(?a, K`I'm, ?b, K`I'p, ?c) = 0;
+        #do J={`I'+1},`NKPAIR'
+            id bookkeep(?a, K`J'p, ?b, K`I'p, ?c) = 0;
+        #enddo
+    #enddo
+    id bookkeep(?a) * bookkeep(?b) = bookkeep(?a);
+
+*     Discard any terms whose traces are not in ascending order by size
+    repeat id bookkeep(m?!{0,},n?!{0,}, ?a) = bookkeep(n, ?a, m-n);
+    id bookkeep(n?, 0, ?a, m?pos_, ?b) = 0;
+
+*     Restore remaining terms
+    id bookkeep(?a) = 1;
+    id tr(?a) = Tr(?a);
+
+    .sort:>>strip K<<;
+
+    #endif
+#endprocedure
+
+*************************************************************************************************
+
+#procedure cross(EXPR)
+* Executes crossing symmetry set up with cross(i,j), which crosses legs i and j.
+
+    .sort
+    skip; nskip `EXPR';
+
+    id cross(n1?,n2?) = replace_(
+        extmomenta[n1],extmomenta[n2], extmomenta[n2],extmomenta[n1]
+        extflav[n1],extflav[n2], extflav[n2],extflav[n1]
+        );
+
+*     #do I=1,`NEXT'
+*         #do J=1,`NEXT'
+*             id cross(`I', `J')
+*                 = replace_(p`J',p`I', p`I',p`J', i`I',i`J', i`J',i`I');
+*         #enddo
+*     #enddo
+
+*     bracket L,i_,M2,lam0,F,Li, `TAGS';
+*     print +s;
+*     .end
+    .sort:>>cross<<;
+    skip; nskip `EXPR';
+
+    #do I=`NEXT',2,-1
+        repeat;
+            id,once,ifmatch->continue`I' cycle(<n1?>,...,<n`I'?>)
+                = cycle(<n1,n1>,...,<n`I',n`I'>);
+
+            #do J=1,`I'
+                id cycle(<n1?,m1?>,...,<n`I'?,m`I'?>)
+                    = cycle(<n1,m2>,...,<n{`I'-1},m`I'>,n`I',m1)
+                    + replace_(
+                        <extmomenta[n1],extmomenta[m1]>,...,<extmomenta[n`I'],extmomenta[m`I']>,
+                        <extflav[n1],extflav[m1]>,...,<extflav[n`I'],extflav[m`I']>);
+            #enddo
+
+            id cycle(<n1?,m1?>,...,<n`I'?,m`I'?>) = 0;
+
+            label continue`I';
+        endrepeat;
+    #enddo
+
+    .sort:>>cycle<<;
+    skip; nskip `EXPR';
+
+    id permute(?a) =  permute(?a) * perm_(replace, ?a);
+
+    #do I=`NEXT',2,-1
+        id permute(<n1?>,...,<n`I'?>) * replace(<m1?>,...,<m`I'?>)
+            = replace_(
+                <extmomenta[n1],extmomenta[m1]>,...,<extmomenta[n`I'],extmomenta[m`I']>,
+                <extflav[n1],extflav[m1]>,...,<extflav[n`I'],extflav[m`I']>
+                );
+    #enddo
+
+    .sort:>>permute<<;
+    skip; nskip `EXPR';
+
+    id mirror = (1 + replace_(
+        <p1,p{`NEXT'/2+1},p{`NEXT'/2+1},p1>,...,<p{`NEXT'/2},p`NEXT',p`NEXT',p{`NEXT'/2}>,
+        <f1,f{`NEXT'/2+1},f{`NEXT'/2+1},f1>,...,<f{`NEXT'/2},f`NEXT',f`NEXT',f{`NEXT'/2}>));
+
+    .sort:>>mirror<<;
+
+
+    #ifdef `PIFORMALISM'
+        #call symmetrizePi(`EXPR');
+    #endif
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure mandel(EXPR)
+    .sort;
+    symbols s,t,u, tpu,tmu, spu,smu;
+    skip; nskip `EXPR';
+
+    #if(`NEXT'==4)
+
+        id p1.p2 = (s - p1.p1 - p2.p2) / 2;
+        id p3.p4 = (s - p3.p3 - p4.p4) / 2;
+        id p1.p3 = (t - p1.p1 - p3.p3) / 2;
+        id p2.p4 = (t - p2.p2 - p4.p4) / 2;
+        id p1.p4 = (u - p1.p1 - p4.p4) / 2;
+        id p2.p3 = (u - p2.p2 - p3.p3) / 2;
+
+        .sort
+        skip; nskip `EXPR';
+
+        id u = <p1.p1>+...+<p4.p4> - s - t;
+
+*         id s = (spu + smu)/2;
+*         id u = (spu - smu)/2;
+*         id spu = 4*Mpi^2 - t;
+
+*         id p?extmomenta[n].p? = Mpi^2;
+
+        .sort:>>4pt Mandelstams<<;
+    #else
+        exit "ERROR: `NEXT'pt Mandelstams not implemented";
+        .end
+    #endif
+
+#endprocedure
+
+*************************************************************************************************
+
+
+
+#endif

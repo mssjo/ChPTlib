@@ -1,0 +1,38 @@
+
+#procedure require(PARAM)
+    #ifndef ``PARAM''
+        #message[require]~~~ ERROR: parameter `PARAM' must be defined
+        #terminate 1
+    #endif
+#endprocedure
+#procedure default(PARAM,DEFAULT)
+    #ifndef ``PARAM''
+        #message[default]~~~ `PARAM' <- `DEFAULT'
+    #endif
+#endprocedure
+
+#procedure store(NAME)
+    #include- names.hf
+    #create <`SAVENAME'_list.hf>
+    #create <`SAVENAME'_sum.hf>
+    #do EXPR={`ACTIVEEXPRNAMES_'}
+        #message[save]~~~ `EXPR' -> `SAVENAME'.sav
+        #write <`SAVENAME'_restore.hf> "global `EXPR'x = `EXPR';"
+        #write <`SAVENAME'_sum.hf> " + `EXPR'"
+    #enddo
+    #message[save]~~~ Restoration to active status -> `SAVENAME'_restore.hf
+    #message[save]~~~ Sum of saved expressions -> `SAVENAME'_sum.hf
+    .store
+    save `SAVENAME'.sav;
+#endprocedure
+#procedure load(NAME)
+    #include- names.hf
+    #message[load]~~~ `SAVENAME'.sav
+    load `SAVENAME'.sav;
+#endprocedure
+#procedure restore(NAME)
+    #call load(`NAME')
+    #include- names.hf
+    #message[restore]~~~ Restoring `NAME' to active expressions ("x" appended to names)
+    #include+ `SAVENAME'_restore.hf
+#endprocedure

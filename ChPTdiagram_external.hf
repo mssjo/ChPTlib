@@ -1,0 +1,668 @@
+#ifndef `CHPTDIAGRAMEXTERNALHF'
+#define CHPTDIAGRAMEXTERNALHF
+
+* Procedures related to specifying external states
+
+#include- ChPTdiagram_defs.hf
+
+*************************************************************************************************
+
+#procedure setPKE(EXPR,PKELIST)
+
+    .sort
+    indices <F1>,...,<F`NEXT'>;
+    skip; nskip `EXPR';
+
+    #define Nx "0"
+    #define Np "0"
+    #define Nk "0"
+    #define Ne "0"
+    #do X={``PKELIST''}
+        #redefine Nx "{`Nx'+1}"
+        #redefine N`X' "{`N`X''+1}"
+        #message[setPKE]~~~ X`Nx'=`X'
+        #switch `X'
+            #case p
+                multiply replace_(f`Nx',f`Np');
+                #break
+
+            #case k
+                multiply replace_(f`Nx',F`Nk');
+                #break
+
+            #case e
+                multiply replace_(f`Nx',8);
+                #break
+
+            #default
+                #message[setPKE]~~~ ERROR: unknown particle `X', should be p,k or e
+                #terminate
+        #endswitch
+        id p`Nx'.p`Nx' = m`X'2;
+    #enddo
+
+    .sort:>>setPKE<<;
+    #if `Nk' > 0
+        symbols <S1>,...,<S`Nk'>;
+    #endif
+    skip; nskip `EXPR';
+*
+    #if `Np' > 0
+        repeat;
+            id Tr(8, flav?{<f1>,...,<f`Np'>}, ?a) = Tr(flav, ?a) / sqrt6;
+            id Tr(flav?{<f1>,...,<f`Np'>}, 8, ?a) = Tr(flav, ?a) / sqrt6;
+        endrepeat;
+    #endif
+    #if `Nk' > 0
+        repeat;
+            id Tr(8, flav?{<F1>,...,<F`Nk'>}[n], ?a) = Tr(flav, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]+1)) / sqrt6;
+            id Tr(flav?{<F1>,...,<F`Nk'>}[n], 8, ?a) = Tr(flav, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]-1)) / sqrt6;
+        endrepeat;
+    #endif
+    #if `Ne' > 0
+        repeat id Tr(8,8,?a) = Tr(?a)/3 - Tr(8,?a)/sqrt6;
+    #endif
+
+    id Tr(flav?) = 0;
+    id Tr() = 3;
+
+    #call sqrt
+
+    .sort:>>setPKE<<;
+
+#endprocedure
+
+#procedure setkaons(EXPR,NKPAIR)
+* Designate a number of pairs of external particles as kaons with opposite strangeness,
+* and work out the resulting interaction with 8's in the flavor structure.
+
+    #if `NKPAIR'>0
+        .sort
+
+        functions <K1p,K1m>,...,<K`NKPAIR'p,K`NKPAIR'm>;
+        set Kx:   <K1p,K1m>,...,<K`NKPAIR'p,K`NKPAIR'm>;
+        symbols   <S1>,...,<S`NKPAIR'>;
+
+        skip; nskip `EXPR';
+
+*         Choose which flavors are kaons
+        multiply left distrib_(1,2*`NKPAIR', kaons, dummy, <f1>,...,<f`NEXT'>);
+        id dummy(?a) = 1;
+*         Order them randomly, compensate for overcounting by pair relabelling
+        id kaons(?a) = perm_(kaons, ?a) * invfac_(`NKPAIR')^2;
+*         Mark those flavors as kaons
+        #do I=1,`NKPAIR'
+            id kaons(f1?, ?ff) * Tr(?a, f1?, ?b) = kaons(?ff) * Tr(?a, K`I'p(f1), ?b);
+            id kaons(f2?, ?ff) * Tr(?a, f2?, ?b) = kaons(?ff) * Tr(?a, K`I'm(f2), ?b);
+        #enddo
+        id kaons() = 1;
+
+        .sort
+        skip; nskip `EXPR';
+
+    #endif
+
+    .sort
+    skip; nskip `EXPR';
+*
+* *     Assume unassigned flavors are pions
+*     id Tr(?a) = tr(?a);
+*     repeat;
+*         id tr(?a, 8, i?extflav, ?b) = tr(?a, i, ?b) / sqrt6;
+*         id tr(?a, i?extflav, 8, ?b) = tr(?a, i, ?b) / sqrt6;
+*         id tr(i?extflav, ?a, 8) = tr(?a, i) / sqrt6;
+*         id tr(8, ?a, i?extflav) = tr(?a, i) / sqrt6;
+*     endrepeat;
+*     id tr(i?extflav) = 0;
+*     #if `NKPAIR'>0
+*         #do I=1,`NKPAIR'
+* *             Prefer "8 to the left" for consistency
+*             repeat;
+*                 id tr(?a, 8, K`I'p(i?), ?b) = tr(?a, K`I'p(i), ?b) * (1 - 3/2*(1 - S`I')) / sqrt6;
+*                 id tr(?a, 8, K`I'm(i?), ?b) = tr(?a, K`I'm(i), ?b) * (1 - 3/2*(1 + S`I')) / sqrt6;
+*                 id tr(K`I'p(i?), ?a, 8)     = tr(K`I'p(i), ?a)     * (1 - 3/2*(1 - S`I')) / sqrt6;
+*                 id tr(K`I'm(i?), ?a, 8)     = tr(K`I'm(i), ?a)     * (1 - 3/2*(1 + S`I')) / sqrt6;
+*             endrepeat;
+*             repeat;
+*                 id tr(?a, K`I'p(i?), 8, ?b) = tr(?a, K`I'p(i), ?b) * (1 + 3/2*(1 + S`I')) / sqrt6;
+*                 id tr(?a, K`I'm(i?), 8, ?b) = tr(?a, K`I'm(i), ?b) * (1 + 3/2*(1 - S`I')) / sqrt6;
+*                 id tr(8, ?a, K`I'p(i?))     = tr(?a, K`I'p(i))     * (1 + 3/2*(1 + S`I')) / sqrt6;
+*                 id tr(8, ?a, K`I'm(i?))     = tr(?a, K`I'm(i))     * (1 + 3/2*(1 - S`I')) / sqrt6;
+*             endrepeat;
+*         #enddo
+*         id tr(K1p?Kx(i?)) = 0;
+*         id tr(K1p?Kx(i?), j?extflav) = 0;
+*         id tr(j?extflav, K1p?Kx(i?)) = 0;
+*     #endif
+*     id tr(?a) = Tr(?a);
+*     id 1/sqrt6^2 = 1/6;
+
+    .sort
+
+#endprocedure
+
+#procedure setext(I,A)
+    multiply replace_(f`I',`A');
+    #if (`A'==1)||(`A'==2)||(`A'==3)
+        id p`I'.p`I' = mp2;
+    #elseif (`A'==4)||(`A'==5)||(`A'==6)||(`A'==7)
+        id p`I'.p`I' = mk2;
+    #elseif (`A'==8)
+        id p`I'.p`I' = me2;
+    #endif
+#endprocedure
+
+#procedure fixext(WHICH)
+    #switch `WHICH'
+        #case etaeta
+            #call setext(1,8)
+            #call setext(2,8)
+            #call setext(3,8)
+            #call setext(4,8)
+            #break
+        #case Keta
+            #call setext(1,7)
+            #call setext(2,8)
+            #call setext(3,6)
+            #call setext(4,8)
+            #break
+        #case Ketapi
+        #case Ketapineu
+            #call setext(1,7)
+            #call setext(2,8)
+            #call setext(3,6)
+            #call setext(4,3)
+            #break
+        #case Ketapich
+            #call setext(1,5)
+            #call setext(2,8)
+            #call setext(3,4)
+            #call setext(4,3)
+            #break
+        #case Ketapix
+            #call setext(1,7)
+            #call setext(2,8)
+            #call setext(3,4)
+            #call setext(4,2)
+            #break
+        #case Kpi
+            #call setext(1,4)
+            #call setext(2,1)
+            #call setext(3,5)
+            #call setext(4,2)
+            #break
+        #case etapi
+            #call setext(1,3)
+            #call setext(2,8)
+            #call setext(3,3)
+            #call setext(4,8)
+            #break
+        #case Kch
+            #call setext(1,4)
+            #call setext(2,5)
+            #call setext(3,5)
+            #call setext(4,4)
+            #break
+        #case Kneu
+            #call setext(1,6)
+            #call setext(2,7)
+            #call setext(3,5)
+            #call setext(4,4)
+            #break
+        #case etapi3
+            #call setext(1,1)
+            #call setext(2,2)
+            #call setext(3,3)
+            #call setext(4,8)
+            #break
+        #case pipi
+            #call setext(1,1)
+            #call setext(2,2)
+            #call setext(3,3)
+            #call setext(4,3)
+            #break
+        #case pich
+            #call setext(1,1)
+            #call setext(2,2)
+            #call setext(3,2)
+            #call setext(4,1)
+            #break
+        #default
+        #case pineu
+            #call setext(1,3)
+            #call setext(2,3)
+            #call setext(3,3)
+            #call setext(4,3)
+        #endswitch
+
+    #call simplifytr()
+#endprocedure
+
+#procedure extkaons(EXPR,NKPAIR)
+    .sort
+    skip; nskip `EXPR';
+    #do I=1,`NKPAIR'
+        id Tr(?a, K`I'p(i?{1,2,3,4,6,8})) = 0;
+        id Tr(?a, K`I'm(i?{1,2,3,5,7,8})) = 0;
+        id Tr(?a, K`I'p(5)) = Tr(?a, 5);
+        id Tr(?a, K`I'p(7)) = Tr(?a, 7);
+        id Tr(?a, K`I'm(4)) = Tr(?a, 4);
+        id Tr(?a, K`I'm(6)) = Tr(?a, 6);
+        id S`I' = -1;
+    #enddo
+    .sort
+#endprocedure
+
+#procedure LOmass()
+    multiply replace_(mp2,Mp2);
+    multiply replace_(mk2,Mk2);
+    multiply replace_(me2,Me2);
+#endprocedure
+
+*************************************************************************************************
+
+#procedure setexternal(EXPR,NP,NQ,NIN,NOUT)
+
+
+    #call conjugate(ext`EXPR',`NIN',`NOUT')
+    #call massmixing(ext`EXPR')
+
+    #call assignexternal(`EXPR',{`NIN'+`NOUT'})
+
+    #call explicitdiag(`EXPR',{`NP'/2+2*`NQ'})
+
+    #call explicittr(`EXPR')
+
+    #call explicittau(`EXPR')
+
+    #call explicitprop(`EXPR')
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure conjugate(EXPR,NIN,NOUT)
+    .sort
+    skip; nskip `EXPR';
+
+*     Take complex conjugate of outgoing particles
+    argument assign,<1>,...,<`NIN'>;
+        id [pi+] = 1;
+        id [pi-] = 2;
+        id [K+]  = 4;
+        id [K-]  = 5;
+        id [K0]  = 6;
+        id [K0b] = 7;
+    endargument;
+    argument assign,<{`NIN'+1}>,...,<{`NIN'+`NOUT'}>;
+        id [pi+] = 2;
+        id [pi-] = 1;
+        id [K+]  = 5;
+        id [K-]  = 4;
+        id [K0]  = 7;
+        id [K0b] = 6;
+    endargument;
+
+    .sort:>>conjugate<<;
+#endprocedure
+
+
+*************************************************************************************************
+
+#procedure massmixing(EXPR)
+
+    #ifdef `MASSMIXING'
+        repeat id assign(?a, [pi0], ?b) = cosmix * assign(?a, 3, ?b) - sinmix * assign(?a, 8, ?b);
+        repeat id assign(?a, [eta], ?b) = sinmix * assign(?a, 3, ?b) + cosmix * assign(?a, 8, ?b);
+
+        #ifdef `ROUGHMASS'
+            id sinmix = 0;
+            id cosmix = 1;
+        #endif
+
+        id cosmix^2 = 1 - sinmix^2;
+
+    #else
+        argument assign;
+            id [pi0] = 3;
+            id [eta] = 8;
+        endargument;
+    #endif
+
+    .sort:>>massmixing<<;
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure assignexternal(EXPR,NM)
+    .sort
+    drop ext`EXPR';
+    skip; nskip `EXPR';
+
+    multiply ext`EXPR';
+
+    id assign(<j1?>,...,<j`NM'?>) =  replace_(<i1,j1>,...,<i{`NM'},j{`NM'}>, <p1sq,mass(j1)>,...,<p`NM'sq,mass(j`NM')>);
+
+    #ifdef `ROUGHMASS'
+        id mass(1) = Mpi;
+        id mass(2) = Mpi;
+        id mass(3) = Mpi;
+        id mass(4) = MK;
+        id mass(5) = MK;
+        id mass(6) = MK;
+        id mass(7) = MK;
+        id mass(8) = Meta;
+    #else
+        id mass(1) = [Mpi+];
+        id mass(2) = [Mpi+];
+        id mass(3) = [Mpi0];
+        id mass(4) = [MK+];
+        id mass(5) = [MK+];
+        id mass(6) = [MK0];
+        id mass(7) = [MK0];
+        id mass(8) = [Meta];
+    #endif
+
+    .sort:>>assignexternal<<;
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure explicitdiag(EXPR,ND)
+    .sort
+    skip; nskip `EXPR';
+
+    repeat id tr(chi, ?a) = B0 * (
+            + (Mu+Md+Ms)/3 * tr(?a)
+            + (Mu-Md)/sqrt2 * tr(3, ?a)
+            + (Mu+Md-2*Ms)/sqrt2/sqrt3 * tr(8,?a)
+        );
+
+    #ifdef `PIFORMALISM'
+        argument;
+            #do I=1,`ND'
+                id N`I'_? = jd`I';
+            #enddo
+        endargument;
+
+        #do I=1,`ND'
+            multiply replace_(jd`I', 0) + replace_(jd`I', 3) + replace_(jd`I', 8);
+
+            #call simplifytr(`EXPR')
+        #enddo
+    #endif
+
+    .sort:>>explicitdiag<<;
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure simplifytr(EXPR)
+    .sort
+    skip; nskip `EXPR';
+
+    repeat id Tr(0, ?a) = Tr(?a) / sqrt3;
+
+*     The repeats are structured such that we use identities that give zero as much as possible,
+*     then those that give a single term,
+*     then those that give several terms.
+    repeat;
+        repeat;
+            repeat;
+                id Tr(1,i?{1,4,5,7}, ?a) = 0;
+                id Tr(2,i?{2,5,6,7}, ?a) = 0;
+                id Tr(4,i?{1,2,4,6}, ?a) = 0;
+                id Tr(5,i?{2,5,6,7}, ?a) = 0;
+                id Tr(6,i?{1,2,4,6}, ?a) = 0;
+                id Tr(7,i?{1,4,5,7}, ?a) = 0;
+
+                id Tr(3,i?{5,7}, ?a) = 0;
+                id Tr(i?{4,6},3, ?a) = 0;
+            endrepeat;
+
+            id Tr(1,6, ?a) = Tr(4, ?a);
+            id Tr(2,4, ?a) = Tr(6, ?a);
+            id Tr(4,7, ?a) = Tr(1, ?a);
+            id Tr(5,1, ?a) = Tr(7, ?a);
+            id Tr(6,5, ?a) = Tr(2, ?a);
+            id Tr(7,2, ?a) = Tr(5, ?a);
+
+            id Tr(3,8, ?a) = Tr(3, ?a)/sqrt6;
+            id Tr(8,3, ?a) = Tr(3, ?a)/sqrt6;
+
+            id Tr(3,i?{1,4}, ?a) = Tr(i, ?a)/sqrt2;
+            id Tr(i?{2,5},3, ?a) = Tr(i, ?a)/sqrt2;
+
+            id Tr(3,i?{2,6}, ?a) = -Tr(i, ?a)/sqrt2;
+            id Tr(i?{1,7},3, ?a) = -Tr(i, ?a)/sqrt2;
+
+            id Tr(8,i?{1,2,4,6}, ?a) = Tr(i, ?a)/sqrt6;
+            id Tr(i?{1,2,5,7},8, ?a) = Tr(i, ?a)/sqrt6;
+
+            id Tr(8,i?{5,7}, ?a) = -2*Tr(i, ?a)/sqrt6;
+            id Tr(i?{4,6},8, ?a) = -2*Tr(i, ?a)/sqrt6;
+        endrepeat;
+
+*         TRX = Tr(IX, ?a) where IX(i,j) = d_(i,X)*d_(j,X)
+        #define TR1 "(1/3*Tr(?a) + 1/sqrt2*Tr(3,?a) + 1/sqrt6*Tr(8,?a))"
+        #define TR2 "(1/3*Tr(?a) - 1/sqrt2*Tr(3,?a) + 1/sqrt6*Tr(8,?a))"
+        #define TR3 "(1/3*Tr(?a)                    - 2/sqrt6*Tr(8,?a))"
+
+        id Tr(1,2, ?a) = `TR1';
+        id Tr(2,1, ?a) = `TR2';
+        id Tr(4,5, ?a) = `TR1';
+        id Tr(5,4, ?a) = `TR3';
+        id Tr(6,7, ?a) = `TR2';
+        id Tr(7,6, ?a) = `TR3';
+
+        id Tr(3,3, ?a) = 1/3*Tr(?a) + 1/sqrt6*Tr(8,?a);
+        id Tr(8,8, ?a) = 1/3*Tr(?a) - 1/sqrt6*Tr(8,?a);
+
+    endrepeat;
+
+    id Tr(i?!{0,}) = 0;
+    id Tr() = 3;
+
+    #call sqrt
+
+    .sort:>>simplifytr<<;
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure explicittr(EXPR)
+
+    #call simplifytr(`EXPR')
+
+    .sort
+
+    #define N "2"
+    symbols ii1,ii2;
+
+    skip; nskip `EXPR';
+
+    #do I=1,1
+        repeat;
+            id tr(<j1?>,...,<j`N'?>) =
+                #do J=1,`N'
+                    sum_(ii`J', 1,3,
+                #enddo
+                        <tau(j1,ii1,ii2)>*...*<tau(j{`N'-1},ii{`N'-1},ii{`N'})> * tau(j`N', ii`N',ii1)
+                #do J=1,`N'
+                    )
+                #enddo
+                ;
+        endrepeat;
+
+        if(match(tr(?a))) redefine I "0";
+        #redefine N "{`N'+1}"
+
+        .sort:>>explicittr: `N'<<;
+        symbol ii`N';
+    #enddo
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure explicittau(EXPR)
+    .sort
+    skip; nskip `EXPR';
+
+
+    id tau(1, i?,j?) = d_(i,1)*d_(j,2);
+    id tau(2, i?,j?) = d_(i,2)*d_(j,1);
+
+    id tau(3, i?,j?) = 1/sqrt2 * (
+                                + d_(i,1)*d_(j,1)
+                                - d_(i,2)*d_(j,2)
+                            );
+
+    id tau(4, i?,j?) = d_(i,1)*d_(j,3);
+    id tau(5, i?,j?) = d_(i,3)*d_(j,1);
+
+    id tau(6, i?,j?) = d_(i,2)*d_(j,3);
+    id tau(7, i?,j?) = d_(i,3)*d_(j,2);
+
+
+    id tau(8, i?,j?) = 1/sqrt2/sqrt3 * (
+                                + d_(i,1)*d_(j,1)
+                                + d_(i,2)*d_(j,2)
+                              - 2*d_(i,3)*d_(j,3)
+                            );
+
+    #call sqrt
+
+    .sort:>>explicittau<<;
+#endprocedure
+
+*************************************************************************************************
+
+#procedure explicitprop(EXPR)
+    .sort
+    skip; nskip `EXPR';
+
+    #ifdef `PIFORMALISM'
+
+        #call splitPi;
+
+        id PiM(i?,j?,n1?) = Pi(i,j,n1, Mass);
+        id PiA(i?,j?,n1?) = Pi(i,j,n1, A);
+        id PiB(tag?, i?,j?,n1?, ?q,ell?) = Pi(i,j,n1, B0(tag,?q), ell);
+        id PiC(tag?, i?,j?,n1?, ?q,ell?) = Pi(i,j,n1, C(tag,?q), ell);
+
+        symmetrize Pi,1,2;
+
+        .sort:>>explicitPi: prep<<;
+
+        id Pi(0,0, ?a) = 1/3 * (
+                + 3/2*prop([pi0],?a) + 2*prop([pi+],?a)
+                + 2*prop([K+],?a) + 2*prop([K0],?a)
+                + 3/2*prop([eta],?a)
+            );
+        id Pi(0,3, ?a) = 1/sqrt2/sqrt3 * (
+                + prop([K+],?a) + prop([K0],?a)
+            );
+        id Pi(0,8, ?a) = 1/3/sqrt2 * (
+                + prop([pi0],?a) + 2*prop([pi+],?a)
+                - prop([K+],?a) - prop([K0],?a)
+                - 3*prop([eta],?a)
+            );
+        id Pi(3,3, ?a) = 1/2 * (
+                2*prop([pi0],?a) - 2*prop([pi+],?a)
+            );
+        id Pi(3,8, ?a) = 1/2/sqrt3 * (
+                - 2*prop([K+],?a) + 2*prop([K0],?a)
+            );
+        id Pi(8,8, ?a) = 1/6 * (
+                + 2*prop([pi+],?a)
+                - 4*prop([K+],?a) - 4*prop([K0],?a)
+                + 6*prop([eta],?a)
+            );
+
+        #call sqrt
+
+        id prop(pi1?flavors[m], n?int_, ?a) = masses[m]^n1 * prop(masses[m], ?a);
+
+        #ifdef `ROUGHMASS'
+
+            multiply replace_([Mpi+], Mpi, [Mpi0], Mpi,
+                            [MK+],  MK,  [MK0],  MK,
+                            [Meta], Meta
+                            );
+
+        #endif
+
+        repeat;
+            id prop(M1?, Mass) = 1;
+            id prop(M1?, A) = A(M1);
+            id prop(M1?, B0(tag?,q1sq?),ell?) * prop(M2?, B0(tag?,q1sq?),ell?) = B0(tag, q1sq, M1,M2);
+            id prop(M1?, C(tag?,q1sq?),ell?) * prop(M2?, C(tag?,q2sq?),ell?) * prop(M3?, C(tag?,q3sq?), ell?) = C(tag, q1sq,q2sq,q3sq, M1,M2,M3);
+        endrepeat;
+
+        symmetrize B0,3,4;
+        symmetrize C,(2,5),(3,6),(4,7);
+
+    #elseif(isdefined(SVTFORMALISM))
+
+        #ifdef `ROUGHMASS'
+
+            id S(n?int_,q?) = (prop(Mpi, n, q) + 2*prop(MK, n, q)) / 3;
+            id V8(n?int_,q?) = (prop(Mpi, n, q) -   prop(MK, n, q)) * sqrt2/sqrt3 / (`VFACTOR');
+            id T88(n?int_,q?) = (prop(Mpi, n, q) - 4*prop(MK, n, q)) / 3 + prop(Meta, n, q);
+
+        #else
+*         TODO
+        #endif
+
+        id prop(Mpi?, n?int_, q?) = Mpi^n * prop(Mpi, q);
+
+    #endif
+
+    .sort:>>explicitprop<<;
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure sqrt()
+
+    id sqrt2*sqrt3 = sqrt6;
+    id sqrt2^2 = 2;
+    id sqrt3^2 = 3;
+    id sqrt6^2 = 6;
+
+    id 1/sqrt2/sqrt3 = 1/sqrt6;
+    id 1/sqrt2^2 = 1/2;
+    id 1/sqrt3^2 = 1/3;
+    id 1/sqrt6^2 = 1/6;
+
+    id 1/sqrt2/sqrt6 = 1/2/sqrt3;
+
+#endprocedure
+
+*************************************************************************************************
+
+#procedure LOmasses(EXPR)
+    .sort
+    skip; nskip `EXPR';
+
+    id Mu = ([MK+]^2/B0 - Ms);
+    id Md = ([MK0]^2/B0 - Ms);
+    id Ms = ([MK+]^2 + [MK0]^2 - [Mpi+]^2)/2 / B0;
+
+    #ifdef `ROUGHMASS'
+        id [Mpi+] = Mpi;
+        id [MK+] = MK;
+        id [MK0] = MK;
+    #endif;
+
+    .sort:>>LOmasses<<;
+
+#endprocedure
+
+#endif

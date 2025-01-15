@@ -1,0 +1,70 @@
+#procedure renormalize(ORD,MAXEPS)
+
+    .sort
+    symbols [d],[d-1],[d-2],[d-3],[d-4];
+    symbols [(cmu)^(d-4)], Lambda, ctil;
+    #ifdef `PVCONV'
+        symbol [expCtad0eps];
+        cfunction ee;
+    #endif
+
+    #if `ORD' == LO
+        #redefine ORD "2"
+    #elseif `ORD' == NLO
+        #redefine ORD "4"
+        #define NORDER "NLO"
+    #elseif `ORD' == N2LO || `ORD' == NNLO
+        #redefine ORD "6"
+    #elseif `ORD' == N3LO || `ORD' == NNNLO
+        #redefine ORD "8"
+    #endif
+
+    #if (isdefined(NORENORM)==0)&&(`ORD'<=`ORDER')
+        #switch `ORD'
+            #case 2
+                #break
+            #case 4
+                #include- ChPTdiagram_p4renorm.hf
+                #break
+            #case 6
+                #include- ChPTdiagram_p6renorm.hf
+                #break
+            #case 8
+                #include- ChPTdiagram_p8renorm.hf
+                #break
+            #default
+                #message[renorm]~~~ ERROR: order p^`ORD' not implemented
+                #terminate
+        #endswitch
+    #endif
+
+    #ifdef `PVCONV'
+        id [(cmu)^(d-4)]^m? = [expCtad0eps]^m * sum_(n,0,`MAXEPS', (m * eps)^n * ee(n) * invfac_(n));
+        id ee(n?) = delta_(n,0);
+    #else
+        id [(cmu)^(d-4)]^m? = sum_(n,0,`MAXEPS', (m * eps * ctil)^n * invfac_(n));
+    #endif
+    id Lambda = kappa / [d-4];
+
+    #call expandD(`MAXEPS')
+
+    .sort:>>renormalize `ORDER'<<;
+#endprocedure
+
+#procedure expandD(MAXEPS)
+
+    id pi^2 = 1/(16*kappa);
+    id 1/pi^2 = 16*kappa;
+
+    id [d] = 4 - 2*eps;
+    id [d-1] = 3 - 2*eps;
+    id [d-2] = 2 - 2*eps;
+    id [d-3] = 1 - 2*eps;
+    id [d-4] =   - 2*eps;
+    id 1/[d-4] = 1/(-2*eps);
+    id 1/[d-3] = sum_(n,0,`MAXEPS', (2*eps)^n);
+    id 1/[d-2] = 1/2 * sum_(n,0,`MAXEPS', eps^n );
+    id 1/[d-1] = 1/3 * sum_(n,0,`MAXEPS', (2/3 * eps)^n );
+    id 1/[d] = 1/4 * sum_(n,0,`MAXEPS', (eps/2)^n);
+
+#endprocedure
