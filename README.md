@@ -1,6 +1,9 @@
 # ChPTdiagram
 Program for the specification and evaluation of diagrams in chiral perturbation theory (ChPT).
 
+This is ultimately based on the FORM procedures used by Hans Bijnens, although it has developed to the point where no Hans-written code remains.
+The laborious hand-definition of diagrams is replaced by code generation, and the complicated pickout procedure has been replaced by the FORM builtin `id,all`.
+
 The Python program ChPTdiagram.py generates FORM code that can then be further customized using the procedures loaded under ChPTdiagram.hf.
 Run 
 ```
