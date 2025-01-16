@@ -909,7 +909,7 @@ class Vertex:
 
         name = self.name_FORM(tag)
 
-        print(f"#call barevertex({name},{self.legs.get('M', 0)},{self.legs.get('V', 0)},{self.order})", file=formfile)
+        print(f"#call makevertex({name},{self.legs.get('M', 0)},{self.legs.get('V', 0)},{self.order})", file=formfile)
 
         return f"vert{name}"
 
