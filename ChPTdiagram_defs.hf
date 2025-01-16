@@ -3,6 +3,10 @@
 
 * Definitions for the ChPT diagram library
 
+* TODO: move the more specific of these to the header file containing the
+*  procedures that actually use them.
+* This works as long as all of ChPTdiagram.hf is always loaded,
+*  and is much more maintainable.
 
 ********************************************************************************
 * Setup, options and parameters
@@ -10,11 +14,13 @@
 * Number of external particles
 #call require(NEXT)
 
-* General parametrization from the sixmeson paper
+* GENeral PARametrization from the sixmeson paper
 #ifdef `GENPAR'
     cfunction a;
 #endif
-* Kalman's preferred parametrization (phi - sqrt(1 - phi^2))
+* The parametrization U = i_ Phi + sqrt(1 - Phi^2) (omitting normalization)
+* Only valid for NF=2
+* KAL is for Kalman Szabo, whose preference for it prompted me to implement it.
 #ifdef `KALPAR'
     #define NF "2"
 #endif
@@ -56,7 +62,10 @@
 
 
 ********************************************************************************
-* Internal momenta
+* Internal momenta, Lorentz indices
+
+indices mu,nu,ro,si,ka,la,al,be;
+set lorentz: mu,nu,ro,si,ka,la,al,be;
 
 #ifdef `LOOPMOMENTA'
     #do L={`LOOPMOMENTA'}
@@ -94,7 +103,9 @@
 set loops: `LOOPMOMENTA';
 
 ********************************************************************************
-* Display preprocessor variables, but importantly do this BEFORE all the LECs and stuff are added
+* Display preprocessor variables
+* Importantly, do this BEFORE all the LECs and stuff are added
+
 #ifndef `QUIET'
     #show
 #endif
@@ -190,9 +201,6 @@ set external: <ext1>,...,<ext`NEXT'>;
 ********************************************************************************
 * Miscellaneous
 
-indices mu,nu,ro,si,ka,la,al,be;
-set lorentz: mu,nu,ro,si,ka,la,al,be;
-
 functions Q, Phi;
 functions tr,chi;
 cfunctions Tr(cyclic), phi, A;
@@ -200,9 +208,9 @@ symbols n, <n1>,...,<n`NEXT'>, m, <m1>,...,<m`NEXT'>;
 symbols sqrt2,sqrt3,sqrt6;
 
 cfunctions prop, coeff;
-functions kaons, derivs, dummy;
+functions sum, derivs, dummy;
 
-symbols [d], <[d-1]>,...,<[d-4]>;
+symbols d, [d], <[d-1]>,...,<[d-4]>;
 symbols kappa,L, eps,etil, log4pi;
 
 function cross, mirror, cycle, permute, replace;

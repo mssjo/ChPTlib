@@ -103,25 +103,7 @@
 
 #procedure barevertex(ID,NM,NV,NP)
 
-    #ifdef `CHECKCOM'
-*     Just sanity check the associated assign(...)
-        .sort
-        skip; drop assign`ID';
-
-        global COM`ID' = assign`ID';
-
-        repeat id assign(?a) * assign(?b) = assign(?a, ?b);
-
-        repeat;
-            id assign(p?extmomenta, ?a) = p + assign(?a);
-            id assign(i?extflav[n], ?a) = extmomenta[n] + assign(?a);
-            id assign(iprop(?i, q?), ?a) = +q + assign(?a);
-            id assign(oprop(?i, q?), ?a) = -q + assign(?a);
-        endrepeat;
-
-        id assign() = 0;
-        .sort
-    #elseif `ORDER' < `NP'
+    #if `ORDER' < `NP'
 *         Ignore vertices of too high order
         #message[makevertex]~~~ vertex `ID' omitted: NP=`NP' higher than ORDER=`ORDER'
         local vert`ID' = 0;

@@ -145,13 +145,13 @@ label Vdone;
             id,once tr(?a, Phi(?lz), ?b) = tr(?a, f`I', ?b) * phi(f`I', ?lz);
         #enddo
 
-*         Make the traces cyclic
-*         This has little power since it isn't automatically combined with index renaming, but it's better than nothing!
-        id tr(?a) = Tr(?a);
-
 *             Tracelessness
-        id Tr(f1?{<f1>,...,<f`NM'>}) = 0;
+        id tr(f1?{<f1>,...,<f`NM'>}) = 0;
     #endif
+
+*     Make the traces cyclic
+*     This has little power since it isn't automatically combined with index renaming, but it's better than nothing!
+    id tr(?a) = Tr(?a);
 
 *     Finalize the transformations
     #ifdef `TRANSFORM'

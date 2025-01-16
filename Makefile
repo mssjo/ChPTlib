@@ -1,5 +1,7 @@
 include names.make
 
+SHELL := /bin/bash
+
 FORM = tform -w4 -l -q -d QUIET
 ifdef NP
 	FORM := $(FORM) -d ORDER=$(NP)
@@ -29,8 +31,7 @@ ipart/%o.hf :
 	ipart -oF $*
 ipart/%f$(NB).hf :
 	mkdir -p ipart
-	ipart -F -f $(NB) $*
-
+	ipart -F -uf $(NB) $*
 
 .PHONY: clean
 clean :
