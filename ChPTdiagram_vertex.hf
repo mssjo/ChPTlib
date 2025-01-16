@@ -16,6 +16,11 @@
     id derivs(q?) = 1;
 #endprocedure
 
+* Backward compatibility with older generated code
+#procedure barevertex(ID,NM,NV,NP)
+    #call makevertex(`ID',`NM',`NV',`NP')
+#endprocedure
+
 #procedure makevertex(ID,NM,NV,NP)
 
     #if `ORDER' < `NP'
