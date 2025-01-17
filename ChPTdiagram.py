@@ -46,17 +46,12 @@ def order_NtoO(order):
         raise ChPTError(f"Invalid power-counting order: '{order}'")
 
 class ChPTDiagram:
-    def __init__(self, tokens, n_ext):
-        if len(tokens) < 1:
-            raise ChPTError("Incomplete diagram definition: name expected")
-        if len(tokens) > 2:
-            raise ChPTError("Too many arguments in diagram definition: only name and symmetry factor expected")
-        sym = tokens[1] if len(tokens) > 1 else '1'
+    def __init__(self, name, n_ext):
 
-        logger.debug(f"Initializing {n_ext}-leg diagram {tokens[0]}, symmetry factor {sym}")
-        self.name = tokens[0]
+        logger.debug(f"Initializing {n_ext}-leg diagram {name}")
+        self.name = name
         self.n_legs = n_ext
-        self.symmetry_factor = sym
+        self.symmetry_factor = {None: '1'}
         self.permutation_group = None
         self.flags = []
 
@@ -87,6 +82,14 @@ class ChPTDiagram:
     def add_edge(self, edge, where=''):
         self.edges.append(edge)
         logger.debug(f"{where} Added edge {edge}")
+
+    def set_symmetry_factor(self, tokens):
+        self.symmetry_factor[None] = tokens[0];
+        for token in tokens[1:]:
+            split = token.split(':')
+            if len(split) != 2 or not split[0] or not split[1]:
+                raise ChPTError("Alternative symmetry factor should be of the format VARIABLE:FACTOR")
+            self.symmetry_factor[split[0]] = split[1]
 
     def set_permutation_group(self, tokens):
         if self.permutation_group is not None:
@@ -226,7 +229,7 @@ class ChPTDiagram:
                 raise ChPTError(f"Failed to resolve momentum routing in {self.name}")
 
 
-    def check_CoM(self, propagators, symbols, substitutions, shortcircuit=False):
+    def check_CoM(self, propagators, symbols, replacements, shortcircuit=False):
         locals().update(symbols)
         violations = []
         for perm in self.permutation_group:
@@ -234,7 +237,7 @@ class ChPTDiagram:
                 zero = sum(vertex.ingoing_momenta)
                 logging.debug(f"CoM, diagram {self.name}, vertex {i+1}, permutation {perm}: {zero}")
                 zero.substitute({f'p{j+1}' : f'p{perm[j]+1}' for j in range(len(perm))})
-                zero.substitute(substitutions)
+                zero.substitute(replacements)
                 if zero != 0:
                     if shortcircuit:
                         return False
@@ -292,8 +295,9 @@ class ChPTDiagram:
             vertex_roster[vertex] = (vertex_roster.get(vertex, 0)) + 1
         return vertex_roster
 
-    def symmetry_factor_FORM(self):
-        return re.sub(r'([0-9]+)!', r'fac_(\1)', self.symmetry_factor)
+    @staticmethod
+    def symmetry_factor_FORM(factor):
+        return re.sub(r'([0-9]+)!', r'fac_(\1)', factor)
 
     def permute_FORM(self, perm, legs):
         replace = ', '.join(f'p{i+1},p{perm[i]+1}' for i in range(len(perm)))
@@ -356,12 +360,27 @@ class ChPTDiagram:
 
             print_info_FORM(formfile, f"This file defines and assembles {diagram}.")
 
+            # Compose diagram
             print(dedent(f"""\
                         global {diagram} = {' * '.join(
                             f'i_*vert{v.name_FORM(vertex_tag_map[i])}'
                             for i,v in enumerate(self.vertices))
-                        } / ({self.symmetry_factor_FORM()});"""
-                        ), file=formfile)
+                        }"""), file=formfile, end='')
+
+            # Divide by symmetry factor
+            if len(self.symmetry_factor) > 2 or self.symmetry_factor[None] != '1':
+                print(indent(dedent(f"""
+                            #ifdef `NOSYMFACT'{''.join(f'''
+                            #elseif isdefined({var})
+                                / ({self.symmetry_factor_FORM(sym)})'''
+                                for var,sym in self.symmetry_factor.items() if var)}
+                            #else
+                                / ({self.symmetry_factor_FORM(self.symmetry_factor[None])})
+                            #endif
+                            ;"""),' '*4), file=formfile)
+            else:
+                print(';', file=formfile)
+
 
             # Connect external lines
             ext = 0
@@ -965,7 +984,7 @@ class ChPTDiagramSet:
         self.diagrams = {}
         self.propagators = []
         self.propagator_name_map = {}
-        self.substitutions = []
+        self.replacements = []
         self.scalar_products = {}
         self.loop_momenta = []
         self.independent_momenta = []
@@ -989,8 +1008,8 @@ class ChPTDiagramSet:
             raise ChPTError("No diagrams specified, plese use 'D ...'")
         if not self.independent_momenta:
             raise ChPTError(f"Independent momenta not specified, suggestion: M {' '.join(f'p{i+1}' for i in range(len(self.legs)-1))}")
-        if not self.substitutions:
-            logger.warning("Momentum substitutions not specified, are you sure conservation of momentum is ensured?")
+        if not self.replacements:
+            logger.warning("Momentum replacements not specified, are you sure conservation of momentum is ensured?")
         if not self.scalar_products:
             logger.warning("Propagator basis relations not specified, can be determined with command 'basis'.")
 
@@ -1023,11 +1042,11 @@ class ChPTDiagramSet:
                     self.independent_products += [(q,token) for q in self.independent_momenta]
                     logger.debug(f"{where} Added independent momentum '{token}'")
 
-            case 'S':
+            case 'R':
                 if len(tokens) != 3:
-                    raise ChPTError("Expected exactly two tokens (left- and right-hand side) in a substitution")
-                self.substitutions.append( (tokens[1], Momentum(tokens[2], self.valid_momenta())) )
-                logger.debug(f"{where} Added substitution {tokens[1]} -> {tokens[2]}")
+                    raise ChPTError("Expected exactly two tokens (left- and right-hand side) in a replacement")
+                self.replacements.append( (tokens[1], Momentum(tokens[2], self.valid_momenta())) )
+                logger.debug(f"{where} Added replacement {tokens[1]} -> {tokens[2]}")
 
             case 'L':
                 for token in tokens[1:]:
@@ -1067,9 +1086,9 @@ class ChPTDiagramSet:
 
             case 'D':
                 self.add_diagram(diagram)
-                diagram = ChPTDiagram(tokens[1:], sum(self.legs.values()))
+                diagram = ChPTDiagram(tokens[1], sum(self.legs.values()))
                 if diagram.name in self.diagrams:
-                    raise ChPTError(f"More than diagram with name {diagram.name}")
+                    raise ChPTError(f"More than one diagram with name {diagram.name}")
                 logger.debug(f"{where} Initialized diagram '{diagram.name}'")
 
             case 'V':
@@ -1101,6 +1120,15 @@ class ChPTDiagramSet:
                         diagram.add_edge(copy(edge), where)
                 else:
                     diagram.add_edge( Edge(diagram.vertices, diagram.vertex_name_map, self.propagators, self.propagator_name_map, tokens[1:]), where )
+
+            case 'S':
+                if diagram is None:
+                    raise ChPTError("Symmetry factor must be inside diagram (expected 'D' before 'S')")
+
+                if len(tokens) < 2:
+                    raise ChPTError(f"Missing symmetry factor in S-statement")
+
+                diagram.set_symmetry_factor(tokens[1:])
 
             case 'G':
                 if diagram is None:
@@ -1190,8 +1218,8 @@ class ChPTDiagramSet:
         #Straightforward momentum relations
         for i,prop in enumerate(self.propagators):
             print(indent(dedent(f"""\
-                    id prop({+prop.momentum.substituted(self.substitutions)},{prop.mass_squared}) = prop{i+1};
-                    id prop({-prop.momentum.substituted(self.substitutions)},{prop.mass_squared}) = prop{i+1};"""), " "*4),
+                    id prop({+prop.momentum.substituted(self.replacements)},{prop.mass_squared}) = prop{i+1};
+                    id prop({-prop.momentum.substituted(self.replacements)},{prop.mass_squared}) = prop{i+1};"""), " "*4),
                     #id [{prop.momentum}].[{prop.momentum}] = 1/prop{i+1} + {prop.mass_squared};
                     file=formfile)
         #for prop in self.all_propagators():
@@ -1222,22 +1250,22 @@ class ChPTDiagramSet:
                     .sort:>>full kinematics<<;
                 #endprocedure
 
-                #procedure substitute(DIAGRAM)
+                #procedure replacements(DIAGRAM)
                     .sort
                     #call nskip(`DIAGRAM')
 
                     repeat;
-                        #call substitutions
-                        #ifdef `SUBSARG'
+                        #call replacementlist
+                        #ifdef `REPLARG'
                             argument;
-                                #call substitutions
+                                #call replacementlist
                             endargument;
                         #endif
                     endrepeat;
                 #endprocedure
 
-                #procedure substitutions()
-                    {newline(5).join(f'id {lhs} = {rhs};' for lhs,rhs in self.substitutions)}
+                #procedure replacementlist()
+                    {newline(5).join(f'id {lhs} = {rhs};' for lhs,rhs in self.replacements)}
                 #endprocedure
                 """),
                 file=formfile)
@@ -1281,7 +1309,7 @@ class ChPTDiagramSet:
         print("Checking conservation of momentum...")
         conservation = True
         for diagram in self.diagrams.values()   :
-            violations = diagram.check_CoM(self.propagators, self.sp_symbols(), self.substitutions)
+            violations = diagram.check_CoM(self.propagators, self.sp_symbols(), self.replacements)
             for vertex,perm,total in violations:
                 print(f"    CoM violation in diagram {diagram.name}, vertex {vertex}, permutation {perm}: momenta sum to {total}")
                 conservation = False
@@ -1297,7 +1325,7 @@ class ChPTDiagramSet:
             #for diagram in self.diagrams.values():
                 #diagram.print_CoM(self.propagators, formfile)
 
-            #self.print_substitutions_FORM(formfile)
+            #self.print_replacements_FORM(formfile)
 
             #print(dedent("""\
                 #.sort
@@ -1513,17 +1541,17 @@ class ChPTDiagramSet:
                 *    This performs all permutations of the diagram's external legs
                     #include- {dirname}/permute/`DIAGRAM'.hf
 
-                *    This enacts all substitutions specified with 'S'
-                *    It only applies inside function arguments if SUBSARG is defined
-                    #call substitute(`DIAGRAM')
+                *    This enacts all replacements specified with 'R'
+                *    It only applies inside function arguments if REPLARG is defined
+                    #call replacements(`DIAGRAM')
 
                 *    This identifies loop integrals
                     #call fullkinematics(`DIAGRAM')
                     #include- {dirname}/loops/`DIAGRAM'.hf
                     if(match(prop{'?{prop,propmatrix}' if any(p.flav_dependent for p in self.all_propagators()) else ''}(?a)));
                         print "NOTE: in `DIAGRAM': %t";
-                        #ifndef `SUBSARG'
-                            print "NOTE: SUBSARG not defined, which might cause this"
+                        #ifndef `REPLARG'
+                            print "NOTE: REPLARG not defined, which might cause this";
                         #endif
                         exit "ERROR: failed to substitute all propagators";
                     endif;
@@ -1619,11 +1647,11 @@ def print_xpt_help():
              Bear in mind that l1, l2, etc. may clash with the names of the LECs.
         - M: Define external momenta, each one given as a separate argument.
              All independent external momenta should be explicitly given this way.
-        - S: Specify a substitution to be applied to the expressions.
+        - R: Specify a replacement to be applied to the expressions.
              For example, this may be used to implement conservation of external momentum, or
              to replace the automatically assigned external momenta with user-defined ones.
-             Takes two arguments, the left- and right-hand side of the substitution,
-             respectively. Example: "S p4 -(p1+p2+p3)" for 4-point diagrams. Bear in mind
+             Takes two arguments, the left- and right-hand side of the replacement,
+             respectively. Example: "R p4 -(p1+p2+p3)" for 4-point diagrams. Bear in mind
              that the expressions should work in both FORM and Mathematica.
         - P: Define a propagator.
              Takes two arguments: the momentum and mass-squared of the propagator.
@@ -1643,7 +1671,7 @@ def print_xpt_help():
              the order the propagators were defined. The command 'basis' automatically
              generates all necessary B-statements.
         - D: Initialize a new active diagram, and finalize the previous one, if any.
-             V, E, G and F statements act on an active diagram, so a D-statement must be made
+             [VESGF]-statements act on an active diagram, so a D-statement must be made
              before these can be used. It is recommended to give all other types of
              statements before the first D-statement, as a preamble. The first argument is
              compulsory, and gives the name of the diagram; this is combined with the diagram
@@ -1672,7 +1700,16 @@ def print_xpt_help():
              a previously defined diagram; this imports all edges of that diagram similarly
              to 'V @...'. Note that vertex names and numbers may be different in this
              diagram, so this should be used with caution.
-        - G: Endow a diagram with a nontrivial group of permutations of its external legs,
+        - S: Endow the current diagram with a symmetry factor.
+             The first argument should be an expression for the symmetry factor, by which the
+             diagram will be divided. Exponents (^) and factorials (!) may be used and will
+             automatically be translated to FORM and Mathematica syntax.
+             Optional symmetry factors may be given, prefixed by the name of a FORM
+             preprocessor variable and a colon. If that variable is defined at the moment the
+             diagram is created, that factor will be used instead (the first one in the order
+             given here takes precedence). There is an implicit NOSYMFACT:1 that overrides
+             other alternative symmetry factors.
+        - G: Endow the current diagram with a group of permutations of its external legs,
              over which it should be summed. There can be at most one G-statement per diagram.
              The default arrangement of external momenta is that all momenta belonging to
              each particle type are assigned in the order they appeared in the X-statements,

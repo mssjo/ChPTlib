@@ -5,7 +5,7 @@
 
 #include- ChPTdiagram_defs.hf
 
-*************************************************************************************************
+********************************************************************************
 
 #procedure doderivs()
     argument derivs;
@@ -18,6 +18,7 @@
 
 * Backward compatibility with older generated code
 #procedure barevertex(ID,NM,NV,NP)
+    #message[vertex]~~~ WARNING: barevertex is deprecated; use makevertex instead
     #call makevertex(`ID',`NM',`NV',`NP')
 #endprocedure
 
@@ -67,33 +68,13 @@
 
         local vert`ID' =
             #ifdef `SQED'
-                #if (`NM'==2) && (`NV'==2)
-                    e^2 * A(mu`ID'1)*A(mu`ID'1) * phi(f`ID'1)*phi(f`ID'2) * delEE(`NP')
-                #elseif (`NM'==2) && (`NV'==1)
-                    -i_*e * (phi(f`ID'1, mu`ID'1)*phi(f`ID'2) - phi(f`ID'1)*phi(f`ID'2, mu`ID'1)) * A(mu`ID'1)  * delE(`NP')
-                #elseif (`NM'==4) && (`NV'==0)
-                    -i_*lambda/fac_(4) * <phi(f`ID'1)>*...*<phi(f`ID'4)> * delL(`NP')
-                #elseif (`NM'==2) && (`NV'==0)
-                    i_*(phi(f`ID'1,mu`ID'1)*phi(f`ID'2,mu`ID'1) * delZ(`NP') - phi(f`ID'1)*phi(f`ID'2) * delM(`NP'))
-                #elseif (`NM'==0) && (`NV'==2)
-                    -i_*(A(mu`ID'1,mu`ID'2)*A(mu`ID'1,mu`ID'2) - A(mu`ID'1,mu`ID'2)*A(mu`ID'2,mu`ID'1)) * delA(`NP')
-                #else
-                    0
-                #endif
+                #call SQEDvertex(`ID',`NM',`NV',`NP')
             #else
                 #system cd `VERTEXDIR'/.. && pwd && echo "`MAKECMD' `VERTEXFILE'" && `MAKECMD' `VERTEXFILE'
                 #message[makevertex]~~~ importing `VERTEXFILE'
                 #include- `VERTEXFILE'
+                ;
             #endif
-            ;
-
-        #ifdef `SQED'
-*     SQED renormalization: each counterterm is viewed as a series del(2)+del(4)+... where each cancels
-*     divergences at the loop level of the corresponding ChPT power counting order.
-            id delEE(n?) = sum_(m,2,n,2, delE(m)*delE(n-m));
-            id delZ?{delZ,delM,delA}(2) = 0;
-            id delZ?{delE,delL}(2) = 1;
-        #endif
 
         multiply replace_(<lorentz[1],mu`ID'x[1]>,...,<lorentz[`NP'],mu`ID'x[`NP']>);
         #if `NM'>0
@@ -102,9 +83,41 @@
 
         bracket Tr;
         print +s;
-        .sort:>>barevertex: `ID'<<;
+        .sort:>>makevertex: `ID'<<;
     #endif
 
 #endprocedure
 
-#endif
+#procedure SQEDvertex(ID,NM,NV,NP)
+    #if (`NM'==2) && (`NV'==2)
+        e^2 * A(mu`ID'1)*A(mu`ID'1) * phi(f`ID'1)*phi(f`ID'2) * delEE(`NP')
+    #elseif (`NM'==2) && (`NV'==1)
+        -i_*e * (phi(f`ID'1, mu`ID'1)*phi(f`ID'2) - phi(f`ID'1)*phi(f`ID'2, mu`ID'1)) * A(mu`ID'1)  * delE(`NP')
+    #elseif (`NM'==4) && (`NV'==0)
+        -i_*lambda/fac_(4) * <phi(f`ID'1)>*...*<phi(f`ID'4)> * delL(`NP')
+    #elseif (`NM'==2) && (`NV'==0)
+        i_*(phi(f`ID'1,mu`ID'1)*phi(f`ID'2,mu`ID'1) * delZ(`NP') - phi(f`ID'1)*phi(f`ID'2) * delM(`NP'))
+    #elseif (`NM'==0) && (`NV'==2)
+        -i_*(A(mu`ID'1,mu`ID'2)*A(mu`ID'1,mu`ID'2) - A(mu`ID'1,mu`ID'2)*A(mu`ID'2,mu`ID'1)) * delA(`NP')
+    #else
+        0
+    #endif
+
+*     One SQED tensor holds the indices of phi, the other those of phi*
+*      (doesn't matter which is which).
+*     This is to enforce that all contractions are phi-phi* rather than
+*      phi-phi or phi*-phi*.
+    #if (`NM'>0)
+        * SQEDphi(<f`ID'1>,...,<f`ID'{`NM'/2}>)
+        * SQEDdag(<f`ID'{`NM'/2+1}>,...,<f`ID'`NM'>)
+    #endif
+
+    ;
+
+*     SQED renormalization: each counterterm is viewed as a series del(2)+del(4)+... where each cancels
+*     divergences at the loop level of the corresponding ChPT power counting order.
+*     id delEE(2) = 1;
+*     id delEE(n?) = sum_(m,2,n-2,2, delE(m)*delE(n-m));
+    id delZ?{delZ,delM,delA}(2) = 0;
+    id delZ?{delE,delEE,delL}(2) = 1;
+#endprocedure

@@ -221,6 +221,10 @@ indices i,j;
 symbols sgn,mark;
 symbol pi;
 
+#ifdef `SQED'
+    ctensors SQED,SQEDphi,SQEDdag;
+#endif
+
 ********************************************************************************
 * Standard bracket statement
 

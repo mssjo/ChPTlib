@@ -20,22 +20,28 @@
     #endif
 
     #if (isdefined(NORENORM)==0)&&(`ORD'<=`ORDER')
-        #switch `ORD'
-            #case 2
-                #break
-            #case 4
-                #include- ChPTdiagram_p4renorm.hf
-                #break
-            #case 6
-                #include- ChPTdiagram_p6renorm.hf
-                #break
-            #case 8
-                #include- ChPTdiagram_p8renorm.hf
-                #break
-            #default
-                #message[renorm]~~~ ERROR: order p^`ORD' not implemented
-                #terminate
-        #endswitch
+        #ifdef `SQED'
+            id delA(4) = e^2/3 * i_*kappa*[expCtad0eps] / eps;
+            id delEE(4) = 2*delE(4) - i_*delZ(4);
+
+        #else
+            #switch `ORD'
+                #case 2
+                    #break
+                #case 4
+                    #include- ChPTdiagram_p4renorm.hf
+                    #break
+                #case 6
+                    #include- ChPTdiagram_p6renorm.hf
+                    #break
+                #case 8
+                    #include- ChPTdiagram_p8renorm.hf
+                    #break
+                #default
+                    #message[renorm]~~~ ERROR: order p^`ORD' not implemented
+                    #terminate
+            #endswitch
+        #endif
     #endif
 
     #ifdef `PVCONV'
