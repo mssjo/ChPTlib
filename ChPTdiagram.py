@@ -1217,6 +1217,8 @@ class ChPTDiagramSet:
 
         #Straightforward momentum relations
         for i,prop in enumerate(self.propagators):
+            if prop.flav_dependent:
+                continue
             print(indent(dedent(f"""\
                     id prop({+prop.momentum.substituted(self.replacements)},{prop.mass_squared}) = prop{i+1};
                     id prop({-prop.momentum.substituted(self.replacements)},{prop.mass_squared}) = prop{i+1};"""), " "*4),
@@ -1553,7 +1555,7 @@ class ChPTDiagramSet:
                         #ifndef `REPLARG'
                             print "NOTE: REPLARG not defined, which might cause this";
                         #endif
-                        exit "ERROR: failed to substitute all propagators";
+                        {'print "WARNING:' if any(prop.flav_dependent for prop in self.propagators) else 'exit "ERROR:'} failed to substitute all propagators";
                     endif;
 
                     #include- {dirname}/flags/off_`DIAGRAM'.hf

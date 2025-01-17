@@ -34,6 +34,9 @@
             = Tr(f1,f2) * Prop(q)
             + (Tr(f1,f2,8) + Tr(f2,f1,8)) * Prop8(q)
             + Tr(f1,8)*Tr(f2,8) * Prop88(q);
+    #else
+        id propmatrix(q?, f1?,f2?)
+            = d_(f1,f2) * prop(q, mp2);
     #endif
 
     bracket Tr;

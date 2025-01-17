@@ -2,5 +2,6 @@ legacy/*
 xformx*
 *.log
 bblocks/*
+!bblocks/rhs.sh
 vertices/*
 ipart/*

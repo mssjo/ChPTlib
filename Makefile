@@ -19,7 +19,7 @@ $(BBLOCKFILE) : ChPTdiagram_bblocks.hf ChPTdiagram_bbexpand.frm
 	$(info Generating $(BBLOCKFILE))
 	$(FORM) $(VERTEXOPTS) -d BBLOCK=$(BBLOCK) -d RANK=$(RANK) ChPTdiagram_bbexpand.frm
 
-$(BBLOCKDIR)/rhs/%on$(NB).hf : ipart/%f$(NB).hf $(BBLOCKDIR)/rhs.sh
+$(BBLOCKDIR)/rhs/%on$(NB).hf : ipart/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
 	mkdir -p $(BBLOCKDIR)/rhs
 	$(BBLOCKDIR)/rhs.sh $* $(NB)
 
@@ -29,7 +29,7 @@ ipart/%u.hf :
 ipart/%o.hf :
 	mkdir -p ipart
 	ipart -oF $*
-ipart/%f$(NB).hf :
+ipart/%uf$(NB).hf :
 	mkdir -p ipart
 	ipart -F -uf $(NB) $*
 
