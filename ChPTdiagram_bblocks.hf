@@ -83,7 +83,7 @@
         id trL(?x) * tr(?y) = tr(?y) * trL(?x);
     endrepeat;
     id trL(?x) * trR = tr(?x);
-    id tr() = Nf;
+    id tr() = `NF';
 #endprocedure
 #procedure untrace()
     id tr(?x) = trL(?x) * trR;

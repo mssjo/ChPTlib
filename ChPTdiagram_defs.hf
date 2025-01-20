@@ -179,7 +179,7 @@ cfunctions `LOOPS';
     set mandel: s,t,u, [s-t],[t-u],[u-s], [t-s],[u-t],[s-u], [s+t],[t+u],[u+s], [t+s],[u+t],[s+u];
 #endif
 
-indices flav,<f1=Nf>,...,<f`NEXT'=Nf>;
+indices flav,<f1=`NF'>,...,<f`NEXT'=`NF'>;
 set extflav: <f1>,...,<f`NEXT'>;
 vectors <p1>,...,<p`NEXT'>;
 set extmomenta: <p1>,...,<p`NEXT'>;
