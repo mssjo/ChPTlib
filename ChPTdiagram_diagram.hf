@@ -43,12 +43,12 @@
 
     repeat;
         id Tr(?X, f1?!{3,8}) * Tr(?Y, f1?!{3,8})
-            = Tr(?X,?Y) - 1/Nf * Tr(?X)*Tr(?Y);
+            = Tr(?X,?Y) - 1/`NF' * Tr(?X)*Tr(?Y);
         id Tr(?X, f1?!{3,8}, ?Y, f1?!{3,8})
-            = Tr(?X)*Tr(?Y) - 1/Nf * Tr(?X,?Y);
+            = Tr(?X)*Tr(?Y) - 1/`NF' * Tr(?X,?Y);
 
         id Tr(f1?extflav) = 0;
-        id Tr() = Nf;
+        id Tr() = `NF';
     endrepeat;
 
     #ifdef `PKEMASS'
@@ -79,45 +79,29 @@
 
     #else
         repeat id Tr(chi, ?a) = mp2 * Tr(?a);
-        id Tr() = Nf;
-    #endif
-
-
-    #ifdef `SIMPLETRQ'
-        .sort:>>dotrace `EXPR'<<;
-        skip; nskip `EXPR';
-        id Tr(Q) = 0;
-        id Tr(Q,Q) = 1;
-    #endif
-    #ifndef `NFGENERAL'
-        .sort:>>dotrace `EXPR'<<;
-        skip; nskip `EXPR';
-        #message[dotrace]~~~ fixing Nf=`NF'
-
-        id Nf = `NF';
-        id 1/Nf = 1/`NF';
-
-*         NOTE: Lagrangian assumes Tr(Q) = 0, so 2-flavor values, while
-*           techincally correct, are inconsistent.
-        #ifndef `KEEPTRQ'
-            #if `NF'==2
-                id Tr(Q) = 1/3;
-                id Tr(Q,Q) = 5/9;
-            #elseif `NF'==3
-                id Tr(Q) = 0;
-                id Tr(Q,Q) = 2/3;
-            #endif
-        #endif
-
-    #else
-        #ifndef `KEEPTRQ'
-            id Tr(Q) = 0;
-            id Tr(Q,Q) = 1;
-        #endif
+        id Tr() = `NF';
     #endif
 
 *     end of keep brackets
-    .sort
+    .sort:>>dotrace `EXPR'<<;
+    skip; nskip `EXPR';
+
+    #ifndef `KEEPTRQ'
+        id Tr(Q) = 0;
+        id Tr(Q,Q) = 1;
+
+*         NOTE: Lagrangian assumes Tr(Q) = 0, so 2-flavor values, while
+*           techincally correct, are inconsistent.
+*         #ifndef `NFGENERAL'
+*             #if `NF'==2
+*                 id Tr(Q) = 1/3;
+*                 id Tr(Q,Q) = 5/9;
+*             #elseif `NF'==3
+*                 id Tr(Q) = 0;
+*                 id Tr(Q,Q) = 2/3;
+*             #endif
+*         #endif
+    #endif
 
     #call sqrt
 

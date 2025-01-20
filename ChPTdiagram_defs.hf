@@ -54,10 +54,6 @@
     #define NFGENERAL
     #define NF "Nf"
     symbol Nf;
-#else
-    #if `NF'>3
-        #define NFGENERAL
-    #endif
 #endif
 
 

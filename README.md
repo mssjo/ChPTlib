@@ -5,9 +5,13 @@ This is ultimately based on the FORM procedures used by Hans Bijnens, although i
 The laborious hand-definition of diagrams is replaced by code generation, and the complicated pickout procedure has been replaced by the FORM builtin `id,all`.
 
 The Python program ChPTdiagram.py generates FORM code that can then be further customized using the procedures loaded under ChPTdiagram.hf.
+Assuming the command `ChPTdiagram` executes ChPTdiagram.py with python 3, basic usage is
+```
+$ ChPTdiagram --generate-form-main
+``` 
 Run 
 ```
-$ python3 ChPTdiagram.py help
+$ ChPTdiagram --help
 ```
 for further instructions, and inspect the generated code for guidance on how to use the FORM library.
 
