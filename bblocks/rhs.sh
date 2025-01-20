@@ -1,7 +1,7 @@
 #!/bin/bash
 
 file=bblocks/rhs/$1on$2.hf
-cp ipart/$1f$2.hf $file
+cp ipart/$1uf$2.hf $file
 
 for i in $(seq 1 $2)
 do
