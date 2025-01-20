@@ -125,4 +125,16 @@
 
 #endprocedure
 
+#procedure checkprops
+    #ifdef `CHECKPROPS'
+        if(match(prop(?a)));
+            print "NOTE: in `DIAGRAM': %t";
+            #if (isdefined(CHPTDIAGRAMPY))&&(isdefined(REPLARG)==0)
+                print "NOTE: REPLARG not defined, which might cause this";
+            #endif
+            exit "ERROR: failed to substitute all propagators";
+        endif;
+    #endif
+#endprocedure
+
 #endif
