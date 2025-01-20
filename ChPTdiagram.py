@@ -1022,136 +1022,143 @@ class ChPTDiagramSet:
         if not tokens or not tokens[0] or tokens[0].startswith('#'):
             return diagram
 
-        match tokens[0]:
+        try:
+            match tokens[0]:
 
-            case 'N':
-                if self.name:
-                    raise ChPTError("Name already specified")
-                if len(tokens) != 2:
-                    raise ChPTError(f"Invalid name: {' '.join(tokens[1:])}")
-                self.name = tokens[1]
+                case 'N':
+                    if self.name:
+                        raise ChPTError("Name already specified")
+                    if len(tokens) != 2:
+                        raise ChPTError(f"Invalid name: {' '.join(tokens[1:])}")
+                    self.name = tokens[1]
 
-                logger.debug(f"{where} Named set '{self.name}'")
+                    logger.debug(f"{where} Named set '{self.name}'")
 
-            case 'X':
-                self.init_external(tokens[1:], where)
+                case 'X':
+                    self.init_external(tokens[1:], where)
 
-            case 'M':
-                for token in tokens[1:]:
-                    self.independent_momenta.append(token)
-                    self.independent_products += [(q,token) for q in self.independent_momenta]
-                    logger.debug(f"{where} Added independent momentum '{token}'")
+                case 'M':
+                    for token in tokens[1:]:
+                        self.independent_momenta.append(token)
+                        self.independent_products += [(q,token) for q in self.independent_momenta]
+                        logger.debug(f"{where} Added independent momentum '{token}'")
 
-            case 'R':
-                if len(tokens) != 3:
-                    raise ChPTError("Expected exactly two tokens (left- and right-hand side) in a replacement")
-                self.replacements.append( (tokens[1], Momentum(tokens[2], self.valid_momenta())) )
-                logger.debug(f"{where} Added replacement {tokens[1]} -> {tokens[2]}")
+                case 'R':
+                    if len(tokens) != 3:
+                        raise ChPTError("Expected exactly two tokens (left- and right-hand side) in a replacement")
+                    self.replacements.append( (tokens[1], Momentum(tokens[2], self.valid_momenta())) )
+                    logger.debug(f"{where} Added replacement {tokens[1]} -> {tokens[2]}")
 
-            case 'L':
-                for token in tokens[1:]:
-                    self.loop_momenta.append(token)
-                    logger.debug(f"{where} Added loop momentum '{token}'")
+                case 'L':
+                    for token in tokens[1:]:
+                        self.loop_momenta.append(token)
+                        logger.debug(f"{where} Added loop momentum '{token}'")
 
-            case 'B':
-                expected_len = 3 + len(self.propagators + self.independent_products)
-                #if len(tokens) != expected_len:
-                    #raise ChPTError(f"Invalid number of elements in propagator basis relation ({len(tokens)}, expected {expected_len})")
+                case 'B':
+                    expected_len = 3 + len(self.propagators + self.independent_products)
+                    #if len(tokens) != expected_len:
+                        #raise ChPTError(f"Invalid number of elements in propagator basis relation ({len(tokens)}, expected {expected_len})")
 
-                self.scalar_products[(tokens[1],tokens[2])] = tokens[3:]
-                logger.debug(f"""{where} Loaded relation {tokens[1]}*{tokens[2]} = {' '.join(
-                          (f'- {coeff[1:]}*' if coeff.startswith('-') else f'+ {coeff}*' if coeff != '1' else '')
-                          + (f'({self.propagators[i].momentum})^2'
-                             if i < len(self.propagators) else
-                             '.'.join(str(q) for q in self.independent_products[i - len(self.propagators)]))
-                          for i, coeff in enumerate(tokens[3:]) if coeff != '0')
-                      }""")
+                    self.scalar_products[(tokens[1],tokens[2])] = tokens[3:]
+                    logger.debug(f"""{where} Loaded relation {tokens[1]}*{tokens[2]} = {' '.join(
+                            (f'- {coeff[1:]}*' if coeff.startswith('-') else f'+ {coeff}*' if coeff != '1' else '')
+                            + (f'({self.propagators[i].momentum})^2'
+                                if i < len(self.propagators) else
+                                '.'.join(str(q) for q in self.independent_products[i - len(self.propagators)]))
+                            for i, coeff in enumerate(tokens[3:]) if coeff != '0')
+                        }""")
 
-            case 'I':
-                for filename in tokens[1:]:
-                    logger.debug(f"{where} Importing file '{filename}'...")
-                    with open(filename, 'r') as file:
-                        for number, line in enumerate(file):
-                            diagram = self.parse_statement(f"{where}>{filename}:{number+1}", line, diagram)
+                case 'I':
+                    for filename in tokens[1:]:
+                        logger.debug(f"{where} Importing file '{filename}'...")
+                        with open(filename, 'r') as file:
+                            for n,l in enumerate(file):
+                                diagram = self.parse_statement(f"{where}>{filename}:{n+1}", l, diagram)
 
-            case 'P':
-                prop = Propagator(tokens[1:], self.valid_momenta())
+                case 'P':
+                    prop = Propagator(tokens[1:], self.valid_momenta())
 
-                if prop.momentum in self.propagator_name_map:
-                    raise ChPTError(f"More than one propagator with momentum {prop.momentum}")
-                self.propagator_name_map[prop.momentum] = len(self.propagators)
+                    if prop.momentum in self.propagator_name_map:
+                        raise ChPTError(f"More than one propagator with momentum {prop.momentum}")
+                    self.propagator_name_map[prop.momentum] = len(self.propagators)
 
-                self.propagators.append(prop)
-                logger.debug(f"{where} Added propagator {len(self.propagators)}: {prop}")
+                    self.propagators.append(prop)
+                    logger.debug(f"{where} Added propagator {len(self.propagators)}: {prop}")
 
-            case 'D':
-                self.add_diagram(diagram)
-                diagram = ChPTDiagram(tokens[1], sum(self.legs.values()))
-                if diagram.name in self.diagrams:
-                    raise ChPTError(f"More than one diagram with name {diagram.name}")
-                logger.debug(f"{where} Initialized diagram '{diagram.name}'")
+                case 'D':
+                    self.add_diagram(diagram)
+                    diagram = ChPTDiagram(tokens[1], sum(self.legs.values()))
+                    if diagram.name in self.diagrams:
+                        raise ChPTError(f"More than one diagram with name {diagram.name}")
+                    logger.debug(f"{where} Initialized diagram '{diagram.name}'")
 
-            case 'V':
-                if diagram is None:
-                    raise ChPTError("Vertex must be inside diagram (expected 'D' before 'V')")
+                case 'V':
+                    if diagram is None:
+                        raise ChPTError("Vertex must be inside diagram (expected 'D' before 'V')")
 
-                if len(tokens) >= 2 and tokens[1][0] == '@':
-                    reference = tokens[1][1:]
-                    if reference not in self.diagrams:
-                        raise ChPTError(f"Unknown reference to diagram '{reference}'")
+                    if len(tokens) >= 2 and tokens[1][0] == '@':
+                        reference = tokens[1][1:]
+                        if reference not in self.diagrams:
+                            raise ChPTError(f"Unknown reference to diagram '{reference}'")
 
-                    logger.debug(f"{where} Importing vertices from diagram '{reference}'...")
-                    for vertex in self.diagrams[reference].vertices:
-                        diagram.add_vertex(copy(vertex), where)
-                else:
-                    diagram.add_vertex( Vertex(tokens[1:]), where )
+                        logger.debug(f"{where} Importing vertices from diagram '{reference}'...")
+                        for vertex in self.diagrams[reference].vertices:
+                            diagram.add_vertex(copy(vertex), where)
+                    else:
+                        diagram.add_vertex( Vertex(tokens[1:]), where )
 
-            case 'E':
-                if diagram is None:
-                    raise CHPTError("Edge must be inside diagram (expected 'D' before 'E')")
+                case 'E':
+                    if diagram is None:
+                        raise CHPTError("Edge must be inside diagram (expected 'D' before 'E')")
 
-                if len(tokens) >= 2 and tokens[1][0] == '@':
-                    reference = tokens[1][1:]
-                    if reference not in self.diagrams:
-                        raise ChPTError(f"Unknown reference to diagram '{reference}'")
+                    if len(tokens) >= 2 and tokens[1][0] == '@':
+                        reference = tokens[1][1:]
+                        if reference not in self.diagrams:
+                            raise ChPTError(f"Unknown reference to diagram '{reference}'")
 
-                    logger.debug(f"{where} Importing edges from diagram '{reference}'...")
-                    for edge in self.diagrams[reference].edges:
-                        diagram.add_edge(copy(edge), where)
-                else:
-                    diagram.add_edge( Edge(diagram.vertices, diagram.vertex_name_map, self.propagators, self.propagator_name_map, tokens[1:]), where )
+                        logger.debug(f"{where} Importing edges from diagram '{reference}'...")
+                        for edge in self.diagrams[reference].edges:
+                            diagram.add_edge(copy(edge), where)
+                    else:
+                        diagram.add_edge( Edge(diagram.vertices, diagram.vertex_name_map, self.propagators, self.propagator_name_map, tokens[1:]), where )
 
-            case 'S':
-                if diagram is None:
-                    raise ChPTError("Symmetry factor must be inside diagram (expected 'D' before 'S')")
+                case 'S':
+                    if diagram is None:
+                        raise ChPTError("Symmetry factor must be inside diagram (expected 'D' before 'S')")
 
-                if len(tokens) < 2:
-                    raise ChPTError(f"Missing symmetry factor in S-statement")
+                    if len(tokens) < 2:
+                        raise ChPTError(f"Missing symmetry factor in S-statement")
 
-                diagram.set_symmetry_factor(tokens[1:])
+                    diagram.set_symmetry_factor(tokens[1:])
 
-            case 'G':
-                if diagram is None:
-                    raise CHPTError("Group must be inside diagram (expected 'D' before 'G')")
+                case 'G':
+                    if diagram is None:
+                        raise CHPTError("Group must be inside diagram (expected 'D' before 'G')")
 
-                if len(tokens) >= 2 and tokens[1][0] == '@':
-                    reference = tokens[1][1:]
-                    if reference not in self.diagrams:
-                        raise ChPTError(f"Unknown reference to diagram '{reference}'")
+                    if len(tokens) >= 2 and tokens[1][0] == '@':
+                        reference = tokens[1][1:]
+                        if reference not in self.diagrams:
+                            raise ChPTError(f"Unknown reference to diagram '{reference}'")
 
-                    logger.debug(f"{where} Importing symmetry group from diagram '{reference}'...")
-                    diagram.permutation_group = self.diagrams[reference].permutation_group
-                else:
-                    diagram.set_permutation_group(tokens[1:])
+                        logger.debug(f"{where} Importing symmetry group from diagram '{reference}'...")
+                        diagram.permutation_group = self.diagrams[reference].permutation_group
+                    else:
+                        diagram.set_permutation_group(tokens[1:])
 
-            case 'F':
-                if diagram is None:
-                    raise ChPTError("Flags must be inside diagram (expected 'D' before 'F')")
+                case 'F':
+                    if diagram is None:
+                        raise ChPTError("Flags must be inside diagram (expected 'D' before 'F')")
 
-                diagram.add_flags(tokens[1:])
+                    diagram.add_flags(tokens[1:])
 
-            case _:
-                raise ChPTError(f"Unknown statement '{tokens[0]}'")
+                case _:
+                    raise ChPTError(f"Unknown statement '{tokens[0]}'")
+
+        except Exception as err:
+            errstr = str(err)
+            if not errstr.endswith('\n'):
+                errstr = errstr + '\n'
+            raise ChPTError(errstr + indent(f"at {where}{newline(1)}{line}", ' '*4))
 
         return diagram
 
@@ -1549,14 +1556,15 @@ class ChPTDiagramSet:
 
                 *    This identifies loop integrals
                     #call fullkinematics(`DIAGRAM')
-                    #include- {dirname}/loops/`DIAGRAM'.hf
-                    if(match(prop{'?{prop,propmatrix}' if any(p.flav_dependent for p in self.all_propagators()) else ''}(?a)));
+                    #include- {dirname}/loops/`DIAGRAM'.hf{f'''
+                    if(match(prop(?a)));
                         print "NOTE: in `DIAGRAM': %t";
                         #ifndef `REPLARG'
                             print "NOTE: REPLARG not defined, which might cause this";
                         #endif
-                        {'print "WARNING:' if any(prop.flav_dependent for prop in self.propagators) else 'exit "ERROR:'} failed to substitute all propagators";
-                    endif;
+                        exit "ERROR: failed to substitute all propagators";
+                    endif;'''
+                    if not any(p.flav_dependent for p in self.all_propagators()) else ''}
 
                     #include- {dirname}/flags/off_`DIAGRAM'.hf
                 #enddo
@@ -1758,11 +1766,11 @@ def main():
     try:
         diagrs = ChPTDiagramSet(sys.argv[1])
     except FileNotFoundError as err:
-        print(f"ERROR: could not find file '{sys.argv[1]}'", file=sys.stderr)
+        print(f"ERROR: xpt file not found: '{sys.argv[1]}'", file=sys.stderr)
         sys.exit(1)
-    #except ChPTError as err:
-        #print(f"ERROR: {err}", file=sys.stderr)
-        #sys.exit(1)
+    except ChPTError as err:
+        print(f"ERROR: {err}", file=sys.stderr)
+        sys.exit(1)
 
     for i,arg in enumerate(sys.argv[2:]):
         if 'help'.startswith(arg.casefold()):
