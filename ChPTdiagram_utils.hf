@@ -41,6 +41,11 @@
     #message[restore]~~~ Restoring `NAME' to active expressions ("x" appended to names)
     #include+ `SAVENAME'_restore.hf
 #endprocedure
+#procedure getsum(NAME)
+    #include- names.hf
+    #message[getsum]~~~ Summing `NAME' as a right-hand side
+    #include+ `SAVENAME'_sum.hf
+#endprocedure
 
 
 * For conditional repetition
@@ -48,5 +53,12 @@
 #define SETREPEAT "id repeat(0) = repeat(1);"
 #define UNSETREPEAT "id repeat(1) = repeat(0);"
 #define IFREPEAT "id repeat(0) = 1; if(match(repeat(1))); id repeat(1) = 1;"
+
+* For conversion of ORDER to NORDER via `NORDER`ORDER''
+#define NORDER2 "LO"
+#define NORDER4 "NLO"
+#define NORDER6 "NNLO"
+#define NORDER8 "N3LO"
+
 
 #endif
