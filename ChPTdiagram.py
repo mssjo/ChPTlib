@@ -19,6 +19,8 @@ from permute import Permutation, Span, Sn, Trivial, Distributions
 import logging
 logger = logging.getLogger("ChPTdiagram")
 logextra = {'where': ''}
+EXTRAINFO = logging.INFO - 1
+logging.addLevelName(EXTRAINFO, "+INFO")
 # From https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
 # ... with some customization
 class ColorFormatter(logging.Formatter):
@@ -34,7 +36,8 @@ class ColorFormatter(logging.Formatter):
 
         self.formats = {
             logging.DEBUG: COLOR%BLUE + format + RESET,
-            logging.INFO: COLOR%WHITE + format + RESET,
+                    EXTRAINFO: COLOR%WHITE + format + RESET,
+            logging.INFO: COLOR%WHITE + BOLD + format + RESET,
             logging.WARNING: COLOR%YELLOW + BOLD + format + RESET,
             logging.ERROR: COLOR%RED + BOLD + format + RESET,
             logging.CRITICAL: COLOR%RED + REVERSE + format + RESET,
@@ -382,6 +385,9 @@ class ChPTDiagram:
                     print(f'#define {flag} "{value}"', file=on)
                 print(f'#undefine {flag}', file=off)
 
+            logger.log(EXTRAINFO, f"Wrote output file {on.name}", extra=logextra)
+            logger.log(EXTRAINFO, f"Wrote output file {off.name}", extra=logextra)
+
         # Define the diagram as the product of its vertices
         with open(f"{formdir}/diagrams/{diagram}.hf", 'w') as formfile:
 
@@ -452,6 +458,8 @@ class ChPTDiagram:
                 #call doderivs
                 #call dotrace({diagram})"""), file=formfile)
 
+            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+
         # If necessary, permute external legs
         with open(f"{formdir}/permute/{diagram}.hf", 'w') as formfile:
             if len(self.permutation_group) > 1:
@@ -470,6 +478,8 @@ class ChPTDiagram:
                             .sort:>>permute {diagram}<<;"""), file=formfile)
             else:
                 print_info_FORM(formfile, f"This file is an empty placeholder, since the permutation group is trivial.")
+
+            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
 
 
         with open(f"{formdir}/loops/{diagram}.hf", 'w') as formfile:
@@ -491,6 +501,8 @@ class ChPTDiagram:
                                 = {integral}({','.join(f'n{i+1}' for i in props_present)});
                             """),
                         file=formfile)
+
+            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
 
         return diagram
 
@@ -1176,6 +1188,7 @@ class ChPTDiagramSet:
 
         print(dedent(f"""\
                     .sort:>>full kinematics<<;
+                    #call replacements(`DIAGRAM')
                 #endprocedure
 
                 #procedure replacements(DIAGRAM)
@@ -1190,6 +1203,7 @@ class ChPTDiagramSet:
                             endargument;
                         #endif
                     endrepeat;
+                    .sort:>>replacements<<;
                 #endprocedure
 
                 #procedure replacementlist()
@@ -1371,7 +1385,7 @@ class ChPTDiagramSet:
                 for index in range(count)
                 ]
 
-            logger.info(f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
 
         with open(f"{dirname}/definitions.hf", 'w') as formfile:
             print_info_FORM(formfile, "This file defines all variables specific to this calculation.")
@@ -1381,19 +1395,20 @@ class ChPTDiagramSet:
             print(f'#define DIAGRAMNAMES "{",".join(diagram_names)}"', file=formfile)
             print(f'#define VERTEXNAMES "{",".join(vertex_names)}"', file=formfile)
 
-            logger.info(f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
 
         with open(f"{dirname}/kinematics.hf", 'w') as formfile:
             print_info_FORM(formfile, "This file defines procedures for simplifying the kinematics.")
             self.print_kinematics_FORM(formfile)
 
-            logger.info(f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+
+        logger.info(f"Wrote output directory {dirname}/", extra=logextra)
+        return dirname
 
     def generate_FORM_main(self):
-        dirname = f"ChPTdiagram_{self.name}"
+        dirname = self.generate_FORM()
         filename = f"{dirname}.frm"
-
-        self.generate_FORM()
 
         with open(filename, 'w') as formfile:
 
@@ -1611,7 +1626,7 @@ def setup_logging(args):
         level=logging.ERROR
         format="[%(levelname)s] %(message)s"
     elif args.debug or args.verbose:
-        level=logging.DEBUG if args.debug else logging.INFO
+        level=logging.DEBUG if args.debug else EXTRAINFO
         format="[%(levelname)7s/%(where)s] %(message)s"
     else:
         level=logging.INFO
@@ -1702,7 +1717,6 @@ def main():
             case 'f':
                 diagrs.generate_FORM()
             case 'F':
-                diagrs.generate_FORM()
                 diagrs.generate_FORM_main()
 
 if __name__ == '__main__':
