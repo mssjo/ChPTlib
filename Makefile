@@ -19,23 +19,27 @@ $(BBLOCKFILE) : ChPTdiagram_bblocks.hf ChPTdiagram_bbexpand.frm
 	$(info Generating $(BBLOCKFILE))
 	$(FORM) $(VERTEXOPTS) -d BBLOCK=$(BBLOCK) -d RANK=$(RANK) ChPTdiagram_bbexpand.frm
 
-$(BBLOCKDIR)/rhs/%on$(NB).hf : ipart/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
+$(BBLOCKDIR)/rhs/%on$(NB).hf : partitions/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
 	mkdir -p $(BBLOCKDIR)/rhs
 	$(BBLOCKDIR)/rhs.sh $* $(NB)
 
-ipart/%u.hf :
+partitions/%u.hf :
 	mkdir -p ipart
 	ipart -uF $*
-ipart/%o.hf :
+partitions/%o.hf :
 	mkdir -p ipart
 	ipart -oF $*
-ipart/%uf$(NB).hf :
+partitions/%uf$(NB).hf :
 	mkdir -p ipart
 	ipart -F -uf $(NB) $*
+
+flavs/flav%.hf : make_flav.py
+	mkdir -p flavs
+	python make_flav.py $*
 
 .PHONY: clean
 clean :
 	rm -f vertices/*
 	rm -rf bblocks/bb*
 	rm -f bblocks/rhs/*
-	rm -f ipart/*
+	rm -f partitions/*

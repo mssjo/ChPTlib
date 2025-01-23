@@ -6,8 +6,8 @@
 
 * Load integer partitions
 #procedure ipart(N,UO)
-    #system `MAKECMD' ipart/`N'`UO'.hf
-    #include- ipart/`N'`UO'.hf
+    #system `MAKECMD' partitions/`N'`UO'.hf
+    #include- partitions/`N'`UO'.hf
 #endprocedure
 #procedure upart(N)
     #call ipart(`N',u)

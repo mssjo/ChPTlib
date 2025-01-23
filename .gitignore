@@ -4,4 +4,6 @@ xformx*
 bblocks/*
 !bblocks/rhs.sh
 vertices/*
-ipart/*
+partitions/*
+flavs/*
+test_*
