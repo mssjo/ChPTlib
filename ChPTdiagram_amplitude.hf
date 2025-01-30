@@ -8,121 +8,121 @@
 
 *************************************************************************************************
 
-#procedure strip(EXPR)
-
-    .sort
-    skip; nskip `EXPR';
-
-*     Fix traces, multiply by bookkeeping function
-    id Tr(?a) = tr(?a);
-    multiply left bookkeep(0);
-
-        print +s;
-        .sort
-*     Discard any terms whose flavor indices are not in order
-    #do I=1,`NEXT'
-*         New trace
-        id,ifmatch->continue`I' bookkeep(?a, 0) * tr(f`I', ?b) = tr(f`I',?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b));
-*         Continuation of trace
-        id,ifmatch->continue`I' tr(?a, f`I', ?b) * bookkeep(?c, n?) = tr(?a, f`I', ?b) * bookkeep(?c, n-1) * delta_(n-1, nargs_(?b));
-
-        discard;
-
-        label continue`I';
-
-        print +s;
-        .sort:>> strip `I' <<;
-    #enddo
-*     Discard any terms whose traces are not in ascending order by size
-    repeat id bookkeep(m?!{0,},n?!{0,}, ?a) = bookkeep(n, ?a, m-n);
-    id bookkeep(n?, 0, ?a, m?pos_, ?b) = 0;
-
-*     Restore remaining terms
-    id bookkeep(?a) = 1;
-    id tr(?a) = Tr(?a);
-
-    .sort:>>strip<<;
-
-#endprocedure
-
-#procedure stripK(EXPR,NKPAIR)
-
-    #if `NKPAIR'==0
-        #call strip(`EXPR')
-    #else
-
-* Variant that supports external kaons.
-* Ordering of indices is independent of whether it's a pion or a kaon.
-* Additional rules are:
-*  1. KIp must come before KIm for each kaon pair I
-*  2. KIp must come before KJp if I<J
-*  3. If a trace contains at least one kaon, the last flavor in the trace must be a kaon.
-
-    .sort
-    skip; nskip `EXPR';
-
-* *     Shortcoming: will sometimes keep multiple versions that are related under Kp <-> Km
-* *     but it's hard to figure that out. The below tryreplace does NOT work.
-*     #do I=1,`NKPAIR'
-*         tryreplace K`I'p,K`I'm, K`I'm,K`I'p;
-*     #enddo
+* #procedure strip(EXPR)
+*
 *     .sort
 *     skip; nskip `EXPR';
-
-*     Fix traces, multiply by bookkeeping function
-*     The second one enforces rules 1 and 2, the last one rule 3.
-    id Tr(?a) = tr(?a);
-    multiply left bookkeep(0) * bookkeep() * bookkeep();
-
-        print +s;
-        .sort
-*     Discard any terms whose flavor indices are not in order
-    #do I=1,`NEXT'
-*         Trace contains kaon but last flavor isn't a kaon -> rule 3 violated
-        id,ifmatch->cont`I' tr(?b, f`I') * bookkeep(?a) * bookkeep(?K) * bookkeep(K1p?, ?k) = 0;
-
-*         New trace (clear rule 3 enforcer)
-        id,ifmatch->cont`I' bookkeep(?a, 0) * bookkeep(?K) * bookkeep(?k) * tr(f`I',?b)
-            = tr(f`I',?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b)) * bookkeep(?K) * bookkeep();
-        id,ifmatch->cont`I' bookkeep(?a, 0) * bookkeep(?K) * bookkeep(?k) * tr(K1p?Kx(f`I'), ?b)
-            = tr(K1p(f`I'),?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b)) * bookkeep(?K, K1p) * bookkeep(K1p);
-
-*         Continuation of trace
-        id,ifmatch->cont`I' tr(?a, f`I', ?b) * bookkeep(?c, n?) * bookkeep(?K) * bookkeep(?k)
-            = tr(?a, f`I', ?b) * bookkeep(?c, n-1) * bookkeep(?K) * bookkeep(?k) * delta_(n-1, nargs_(?b));
-        id,ifmatch->cont`I' tr(?a, K1p?Kx(f`I'), ?b) * bookkeep(?c, n?) * bookkeep(?K) * bookkeep(?k)
-            = tr(?a, K1p(f`I'), ?b) * bookkeep(?c, n-1) * bookkeep(?K, K1p) * bookkeep(?k, K1p) * delta_(n-1, nargs_(?b));
-
-        discard;
-
-        label cont`I';
-
-        print +s;
-        .sort:>> strip K `I' <<;
-    #enddo
-
-* *     Enforce rules 1 and 2 (discard unneeded enforcers)
-    id bookkeep(?a) * bookkeep(?b) * bookkeep(?c) = bookkeep(?a) * bookkeep(?b);
-    #do I=1,`NKPAIR'
-        id bookkeep(?a, K`I'm, ?b, K`I'p, ?c) = 0;
-        #do J={`I'+1},`NKPAIR'
-            id bookkeep(?a, K`J'p, ?b, K`I'p, ?c) = 0;
-        #enddo
-    #enddo
-    id bookkeep(?a) * bookkeep(?b) = bookkeep(?a);
-
-*     Discard any terms whose traces are not in ascending order by size
-    repeat id bookkeep(m?!{0,},n?!{0,}, ?a) = bookkeep(n, ?a, m-n);
-    id bookkeep(n?, 0, ?a, m?pos_, ?b) = 0;
-
-*     Restore remaining terms
-    id bookkeep(?a) = 1;
-    id tr(?a) = Tr(?a);
-
-    .sort:>>strip K<<;
-
-    #endif
-#endprocedure
+*
+* *     Fix traces, multiply by bookkeeping function
+*     id Tr(?a) = tr(?a);
+*     multiply left bookkeep(0);
+*
+*         print +s;
+*         .sort
+* *     Discard any terms whose flavor indices are not in order
+*     #do I=1,`NEXT'
+* *         New trace
+*         id,ifmatch->continue`I' bookkeep(?a, 0) * tr(f`I', ?b) = tr(f`I',?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b));
+* *         Continuation of trace
+*         id,ifmatch->continue`I' tr(?a, f`I', ?b) * bookkeep(?c, n?) = tr(?a, f`I', ?b) * bookkeep(?c, n-1) * delta_(n-1, nargs_(?b));
+*
+*         discard;
+*
+*         label continue`I';
+*
+*         print +s;
+*         .sort:>> strip `I' <<;
+*     #enddo
+* *     Discard any terms whose traces are not in ascending order by size
+*     repeat id bookkeep(m?!{0,},n?!{0,}, ?a) = bookkeep(n, ?a, m-n);
+*     id bookkeep(n?, 0, ?a, m?pos_, ?b) = 0;
+*
+* *     Restore remaining terms
+*     id bookkeep(?a) = 1;
+*     id tr(?a) = Tr(?a);
+*
+*     .sort:>>strip<<;
+*
+* #endprocedure
+*
+* #procedure stripK(EXPR,NKPAIR)
+*
+*     #if `NKPAIR'==0
+*         #call strip(`EXPR')
+*     #else
+*
+* * Variant that supports external kaons.
+* * Ordering of indices is independent of whether it's a pion or a kaon.
+* * Additional rules are:
+* *  1. KIp must come before KIm for each kaon pair I
+* *  2. KIp must come before KJp if I<J
+* *  3. If a trace contains at least one kaon, the last flavor in the trace must be a kaon.
+*
+*     .sort
+*     skip; nskip `EXPR';
+*
+* * *     Shortcoming: will sometimes keep multiple versions that are related under Kp <-> Km
+* * *     but it's hard to figure that out. The below tryreplace does NOT work.
+* *     #do I=1,`NKPAIR'
+* *         tryreplace K`I'p,K`I'm, K`I'm,K`I'p;
+* *     #enddo
+* *     .sort
+* *     skip; nskip `EXPR';
+*
+* *     Fix traces, multiply by bookkeeping function
+* *     The second one enforces rules 1 and 2, the last one rule 3.
+*     id Tr(?a) = tr(?a);
+*     multiply left bookkeep(0) * bookkeep() * bookkeep();
+*
+*         print +s;
+*         .sort
+* *     Discard any terms whose flavor indices are not in order
+*     #do I=1,`NEXT'
+* *         Trace contains kaon but last flavor isn't a kaon -> rule 3 violated
+*         id,ifmatch->cont`I' tr(?b, f`I') * bookkeep(?a) * bookkeep(?K) * bookkeep(K1p?, ?k) = 0;
+*
+* *         New trace (clear rule 3 enforcer)
+*         id,ifmatch->cont`I' bookkeep(?a, 0) * bookkeep(?K) * bookkeep(?k) * tr(f`I',?b)
+*             = tr(f`I',?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b)) * bookkeep(?K) * bookkeep();
+*         id,ifmatch->cont`I' bookkeep(?a, 0) * bookkeep(?K) * bookkeep(?k) * tr(K1p?Kx(f`I'), ?b)
+*             = tr(K1p(f`I'),?b) * bookkeep(?a, nargs_(f`I',?b), nargs_(?b)) * bookkeep(?K, K1p) * bookkeep(K1p);
+*
+* *         Continuation of trace
+*         id,ifmatch->cont`I' tr(?a, f`I', ?b) * bookkeep(?c, n?) * bookkeep(?K) * bookkeep(?k)
+*             = tr(?a, f`I', ?b) * bookkeep(?c, n-1) * bookkeep(?K) * bookkeep(?k) * delta_(n-1, nargs_(?b));
+*         id,ifmatch->cont`I' tr(?a, K1p?Kx(f`I'), ?b) * bookkeep(?c, n?) * bookkeep(?K) * bookkeep(?k)
+*             = tr(?a, K1p(f`I'), ?b) * bookkeep(?c, n-1) * bookkeep(?K, K1p) * bookkeep(?k, K1p) * delta_(n-1, nargs_(?b));
+*
+*         discard;
+*
+*         label cont`I';
+*
+*         print +s;
+*         .sort:>> strip K `I' <<;
+*     #enddo
+*
+* * *     Enforce rules 1 and 2 (discard unneeded enforcers)
+*     id bookkeep(?a) * bookkeep(?b) * bookkeep(?c) = bookkeep(?a) * bookkeep(?b);
+*     #do I=1,`NKPAIR'
+*         id bookkeep(?a, K`I'm, ?b, K`I'p, ?c) = 0;
+*         #do J={`I'+1},`NKPAIR'
+*             id bookkeep(?a, K`J'p, ?b, K`I'p, ?c) = 0;
+*         #enddo
+*     #enddo
+*     id bookkeep(?a) * bookkeep(?b) = bookkeep(?a);
+*
+* *     Discard any terms whose traces are not in ascending order by size
+*     repeat id bookkeep(m?!{0,},n?!{0,}, ?a) = bookkeep(n, ?a, m-n);
+*     id bookkeep(n?, 0, ?a, m?pos_, ?b) = 0;
+*
+* *     Restore remaining terms
+*     id bookkeep(?a) = 1;
+*     id tr(?a) = Tr(?a);
+*
+*     .sort:>>strip K<<;
+*
+*     #endif
+* #endprocedure
 
 *************************************************************************************************
 
