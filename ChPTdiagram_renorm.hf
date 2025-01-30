@@ -3,9 +3,12 @@
     .sort
     symbols [d],[d-1],[d-2],[d-3],[d-4];
     symbols [(cmu)^(d-4)], Lambda, ctil;
-    #ifdef `PVCONV'
-        symbol [expCtad0eps];
-        cfunction ee;
+    #ifdef `PMCONV'
+        cfunction C;
+    #endif
+    #ifdef `HNCONV'
+        symbol [Gam(1+eps)];
+        cfunction C;
     #endif
 
     #if `ORD' == LO
@@ -23,7 +26,6 @@
         #ifdef `SQED'
             id delA(4) = e^2/3 * i_*kappa*[expCtad0eps] / eps;
             id delEE(4) = 2*delE(4) - i_*delZ(4);
-
         #else
             #switch `ORD'
                 #case 2
@@ -44,9 +46,10 @@
         #endif
     #endif
 
-    #ifdef `PVCONV'
-        id [(cmu)^(d-4)]^m? = [expCtad0eps]^m * sum_(n,0,`MAXEPS', (m * eps)^n * ee(n) * invfac_(n));
-        id ee(n?) = delta_(n,0);
+    #if isdefined(PMCONV)
+        id [(cmu)^(d-4)]^m? = C(eps,mp2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1))^n * invfac_(n));
+    #elseif isdefined(HNCONV)
+        id [(cmu)^(d-4)]^m? = C(eps,mp2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1 - gammaE))^n * invfac_(n)) / [Gam(1+eps)];
     #else
         id [(cmu)^(d-4)]^m? = sum_(n,0,`MAXEPS', (m * eps * ctil)^n * invfac_(n));
     #endif
