@@ -7,9 +7,9 @@ The laborious hand-definition of diagrams is replaced by code generation, and th
 The Python program ChPTdiagram.py generates FORM code that can then be further customized using the procedures loaded under ChPTdiagram.hf.
 Assuming the command `ChPTdiagram` executes ChPTdiagram.py with python 3, basic usage is
 ```
-$ ChPTdiagram --generate-form-main
+$ ChPTdiagram --generate-form-main <diagrams.xpt>
 ``` 
-Run 
+where `diagrams.xpt` contains definitions of the diagrams. Run 
 ```
 $ ChPTdiagram --help
 ```
