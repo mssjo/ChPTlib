@@ -29,23 +29,40 @@
 
     id d_(f1?extflav,f2?extflav) = Tr(f1,f2);
 
-    #ifdef `PKEMASS'
-        id propmatrix(q?, f1?,f2?)
-            = Tr(f1,f2) * Prop(q)
-            + (Tr(f1,f2,8) + Tr(f2,f1,8)) * Prop8(q)
-            + Tr(f1,8)*Tr(f2,8) * Prop88(q);
-    #endif
+*     #ifdef `PKEMASS'
+*         id propmatrix(q?, f1?,f2?)
+*             = Tr(f1,f2) * Prop(q)
+*             + (Tr(f1,f2,8) + Tr(f2,f1,8)) * Prop8(q)
+*             + Tr(f1,8)*Tr(f2,8) * Prop88(q);
+*     #endif
 
-    bracket Tr;
+    bracket Tr
+    #ifdef `PKEMASS'
+        , propmatrix
+    #endif
+    ;
     .sort
     skip; nskip `EXPR';
     keep brackets;
 
     repeat;
-        id Tr(?X, f1?!{3,8}) * Tr(?Y, f1?!{3,8})
-            = Tr(?X,?Y) - 1/`NF' * Tr(?X)*Tr(?Y);
-        id Tr(?X, f1?!{3,8}, ?Y, f1?!{3,8})
-            = Tr(?X)*Tr(?Y) - 1/`NF' * Tr(?X,?Y);
+        #ifdef `PKEMASS'
+            id Tr(?X, f1?!{8,}) *  Tr(?Y, f2?!{8,}) * propmatrix(q?, f1?,f2?)
+                = (Tr(?X,?Y) - 1/3*Tr(?X)*Tr(?Y)) * Prop(q)
+                + (Tr(8, ?X,?Y) + Tr(8, ?Y,?X) - 2/3*Tr(?X,8)*Tr(?Y) - 2/3*Tr(?X)*Tr(8,?Y)) * Prop8(q)
+                + Tr(?X, 8) * Tr(8, ?Y) * Prop88(q);
+            id Tr(?X, f1?!{8,}, ?Y, f2?!{8,}) * propmatrix(q?, f1?,f2?)
+                = (Tr(?X)*Tr(?Y) - 1/3*Tr(?X,?Y)) * Prop(q)
+                + (Tr(?X,8)*Tr(?Y) + Tr(?X)*Tr(8,?Y) - 2/3*Tr(8, ?X,?Y) - 2/3*Tr(8, ?Y,?X)) * Prop8(q)
+                + Tr(8, ?X, 8, ?Y) * Prop88(q);
+
+            id Tr(8) = 0;
+        #else
+            id Tr(?X, f1?!{3,8}) * Tr(?Y, f1?!{3,8})
+                = Tr(?X,?Y) - 1/`NF' * Tr(?X)*Tr(?Y);
+            id Tr(?X, f1?!{3,8}, ?Y, f1?!{3,8})
+                = Tr(?X)*Tr(?Y) - 1/`NF' * Tr(?X,?Y);
+        #endif
 
         id Tr(f1?extflav) = 0;
         id Tr() = `NF';
