@@ -5,10 +5,20 @@
 * Something of a work in progress -- expect heavy revisions
 
 #include- ChPTdiagram_defs.hf
+#include- ChPTdiagram_flavs.hf
 
 *************************************************************************************************
 
-#procedure setPKE(EXPR,PKELIST)
+#procedure setPKE(EXPR)
+    #ifndef `PKELIST'
+        #ifdef `FLAVS'
+            #define PKELIST "`PKE`FLAVS''"
+            #message[setPKE]~~~ PKELIST not defined, defaulting via FLAVS to PKE`FLAVS'
+        #else
+            #message[setPKE]~~~ ERROR: setPKE needs PKELIST defined
+            #terminate
+        #endif
+    #endif
 
     .sort
     indices <F1>,...,<F`NEXT'>;
@@ -18,21 +28,21 @@
     #define Np "0"
     #define Nk "0"
     #define Ne "0"
-    #do X={``PKELIST''}
+    #do X={`PKELIST'}
         #redefine Nx "{`Nx'+1}"
         #redefine N`X' "{`N`X''+1}"
-        #message[setPKE]~~~ X`Nx'=`X'
+        #message[setPKE]~~~ external `Nx' = `X'
         #switch `X'
             #case p
-                multiply replace_(f`Nx',f`Np');
+                multiply replace(f`Nx',f`Np');
                 #break
 
             #case k
-                multiply replace_(f`Nx',F`Nk');
+                multiply replace(f`Nx',F`Nk');
                 #break
 
             #case e
-                multiply replace_(f`Nx',8);
+                multiply replace(f`Nx',8);
                 #break
 
             #default
@@ -42,34 +52,152 @@
         id p`Nx'.p`Nx' = m`X'2;
     #enddo
 
-    .sort:>>setPKE<<;
-    #if `Nk' > 0
+    #if {`Np'+`Nk'+`Ne'} != `NEXT'
+        #message[setPKE]~~~ ERROR: length of PKELIST (`PKELIST') does not match NEXT (`NEXT')
+        #terminate
+    #endif
+
+    repeat id replace(?a) * replace(?b) = replace(?a,?b);
+    id replace(?a) = replace_(?a);
+
+    .sort:>>setPKE `EXPR'<<;
+    #if `Np' > 1
+        set pflav: <f1>,...,<f`Np'>;
+    #else
+        indices f1,f2;* Fallback for wildcarding
+        set pflav: f1,f2;
+    #endif
+    #if `Nk' > 1
         symbols <S1>,...,<S`Nk'>;
+        set kflav: <F1>,...,<F`Nk'>;
+    #else
+        symbols S1,S2;
+        indices F1,F2;* Fallback for wildcarding
+        set kflav: F1,F2;
     #endif
     skip; nskip `EXPR';
 *
     #if `Np' > 0
         repeat;
-            id Tr(8, flav?{<f1>,...,<f`Np'>}, ?a) = Tr(flav, ?a) / sqrt6;
-            id Tr(flav?{<f1>,...,<f`Np'>}, 8, ?a) = Tr(flav, ?a) / sqrt6;
+            id Tr(8, f1?pflav, ?a) = Tr(f1, ?a) / sqrt6;
+            id Tr(f1?pflav, 8, ?a) = Tr(f1, ?a) / sqrt6;
         endrepeat;
     #endif
     #if `Nk' > 0
         repeat;
-            id Tr(8, flav?{<F1>,...,<F`Nk'>}[n], ?a) = Tr(flav, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]+1)) / sqrt6;
-            id Tr(flav?{<F1>,...,<F`Nk'>}[n], 8, ?a) = Tr(flav, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]-1)) / sqrt6;
+            id Tr(8, F1?kflav[n], ?a) = Tr(F1, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]+1)) / sqrt6;
+            id Tr(F1?kflav[n], 8, ?a) = Tr(F1, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]-1)) / sqrt6;
         endrepeat;
     #endif
-    #if `Ne' > 0
-        repeat id Tr(8,8,?a) = Tr(?a)/3 - Tr(8,?a)/sqrt6;
-    #endif
+    repeat id Tr(8,8,?a) = Tr(?a)/3 - Tr(8,?a)/sqrt6;
 
     id Tr(flav?) = 0;
     id Tr() = 3;
 
     #call sqrt
 
-    .sort:>>setPKE<<;
+    .sort:>>setPKE `EXPR'<<;
+
+#endprocedure
+
+#procedure cayham(EXPR)
+* Cayley-Hamilton theorem
+
+    #if (isdefined(cayham`FLAVS')==0)
+        #message[cayham]~~~ cayham`FLAVS' not defined, skipping
+        #define cayham`FLAVS' ""
+    #endif
+
+    .sort
+    function ac;
+    skip; nskip `EXPR';
+
+    repeat;
+        `cayham`FLAVS''
+        label continue;* at most one substitution per repeat for predictability
+        id Tr(ac(f1?,f2?), ?a) = Tr(f1,f2, ?a) + Tr(f2,f1, ?a);* anticommutator
+    endrepeat;
+
+    .sort:>>cayham `EXPR'<<;
+
+#endprocedure
+
+#procedure kaonids(EXPR)
+* Implement kaon flavor identities
+    .sort
+    cfunction kaonids(cyclic);
+    skip; nskip `EXPR';
+
+    id Tr(?a) = Tr(?a) * kaonids(?a);
+
+*     Reduce pion products to a single pion,
+*     Reduce products of three or more kaons preserving parity
+    repeat;
+        id kaonids(f1?pflav, f2?pflav, ?a) = kaonids(f1, ?a);
+        id kaonids(F1?kflav, F2?kflav, F3?kflav, ?a) = kaonids(F1, ?a);
+    endrepeat;
+
+*     Enforce odd-product rule
+    id kaonids(f1?pflav, F1?kflav, f2?pflav, F2?kflav) = 0;
+    id kaonids(f1?pflav, F1?kflav, f2?pflav, F2?kflav, f3?pflav, ?a) = 0;
+
+*     Remove pions
+*     Reduce kaons again, still preserving parity
+    repeat id kaonids(f1?pflav, ?a) = kaonids(?a);
+    repeat id kaonids(F1?kflav, F2?kflav, ?a) = kaonids(?a);
+
+*     Enforce even number of kaons in trace
+    id kaonids(F1?kflav) = 0;
+    id kaonids() = 1;
+
+    .sort:>>kaonids `EXPR'<<;
+#endprocedure
+
+#procedure strip(EXPR)
+    #ifndef `FLAVLIST'
+        #ifdef `FLAVS'
+            #define FLAVLIST "`FLAVS`FLAVS''"
+            #message[strip]~~~ FLAVLIST not defined, defaulting via FLAVS to FLAVS`FLAVS' (`FLAVLIST')
+        #else
+            #message[strip]~~~ ERROR: strip needs FLAVLIST defined
+            #terminate
+        #endif
+    #endif
+
+    #ifdef `PKEMASS'
+        #call kaonids(`EXPR')
+        #call cayham(`EXPR')
+    #elseif `NF'==2
+        #call cayham(`EXPR')
+    #endif
+
+    bracket `TRACES';
+    .sort
+    #ifndef `STRIPNODROP'
+        drop `EXPR';
+    #endif
+
+    #do FLAV={`FLAVLIST',END}
+        #if `FLAV'==END
+            #breakdo
+        #endif
+        local `EXPR'x`FLAV' = `EXPR'[`Tr`FLAV''];
+    #enddo
+    #do FLAV={`FLAVLIST',END}
+        #if `FLAV'==END
+            #breakdo
+        #endif
+
+        #if isdefined(Srel`FLAV')
+            .sort
+            skip;
+            nskip `EXPR'x`FLAV';
+
+            `Srel`FLAV''
+        #endif
+    #enddo
+
+    .sort:>>strip `EXPR'<<;
 
 #endprocedure
 

@@ -3,6 +3,7 @@
 
 * The ChPT diagram calculation library
 
+#include- dirs.hf
 #include- ChPTdiagram_utils.hf
 
 #ifndef `ORDER'
