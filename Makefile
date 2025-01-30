@@ -24,18 +24,18 @@ $(BBLOCKDIR)/rhs/%on$(NB).hf : partitions/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
 	$(BBLOCKDIR)/rhs.sh $* $(NB)
 
 partitions/%u.hf :
-	mkdir -p ipart
+	mkdir -p partitions
 	ipart -uF $*
 partitions/%o.hf :
-	mkdir -p ipart
+	mkdir -p partitions
 	ipart -oF $*
 partitions/%uf$(NB).hf :
-	mkdir -p ipart
+	mkdir -p partitions
 	ipart -F -uf $(NB) $*
 
-flavs/flav%.hf : make_flav.py
+$(CHPTDIR)/flavs/flav$(NM).hf : make_flav.py
 	mkdir -p flavs
-	python make_flav.py $*
+	python make_flav.py $(NM)
 
 .PHONY: clean
 clean :
