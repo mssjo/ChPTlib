@@ -18,33 +18,53 @@
 * (convenience wrapper around the builtins)
 #procedure store(NAME)
     #include- names.hf
-    #create <`SAVENAME'_list.hf>
+    #create <`SAVENAME'_restore.hf>
+    #create <`SAVENAME'_restore_tagged.hf>
     #create <`SAVENAME'_sum.hf>
+    #create <`SAVENAME'_sum_tagged.hf>
+    #create <`SAVENAME'_tags.hf>
     #do EXPR={`ACTIVEEXPRNAMES_'}
         #message[save]~~~ `EXPR' -> `SAVENAME'.sav
         #write <`SAVENAME'_restore.hf> "global `EXPR'x = `EXPR';"
+        #write <`SAVENAME'_restore_tagged.hf> "global `EXPR'x = tag`EXPR'*`EXPR';"
         #write <`SAVENAME'_sum.hf> " + `EXPR'"
+        #write <`SAVENAME'_sum_tagged.hf> " + tag`EXPR'*`EXPR'"
+        #write <`SAVENAME'_tags.hf> " ,tag`EXPR'"
     #enddo
     #message[save]~~~ Restoration to active status -> `SAVENAME'_restore.hf
     #message[save]~~~ Sum of saved expressions -> `SAVENAME'_sum.hf
+    #message[save]~~~ Tagged versions -> `SAVENAME'_tags.hf etc.
     .store
     save `SAVENAME'.sav;
 #endprocedure
 #procedure load(NAME)
     #include- names.hf
     #message[load]~~~ `SAVENAME'.sav
+    #ifdef `TAG'
+        symbols
+            #include- `SAVENAME'_tags.hf
+            ;
+    #endif
     load `SAVENAME'.sav;
 #endprocedure
 #procedure restore(NAME)
     #call load(`NAME')
     #include- names.hf
     #message[restore]~~~ Restoring `NAME' to active expressions ("x" appended to names)
-    #include+ `SAVENAME'_restore.hf
+    #ifdef `TAG'
+        #include+ `SAVENAME'_restore_tagged.hf
+    #else
+        #include+ `SAVENAME'_restore.hf
+    #endif
 #endprocedure
 #procedure getsum(NAME)
     #include- names.hf
     #message[getsum]~~~ Summing `NAME' as a right-hand side
-    #include+ `SAVENAME'_sum.hf
+    #ifdef `TAG'
+        #include+ `SAVENAME'_sum_tagged.hf
+    #else
+        #include+ `SAVENAME'_sum.hf
+    #endif
 #endprocedure
 
 
