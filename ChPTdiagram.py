@@ -1392,8 +1392,13 @@ class ChPTDiagramSet:
 
             self.print_definitions_FORM(formfile)
 
-            print(f'#define DIAGRAMNAMES "{",".join(diagram_names)}"', file=formfile)
-            print(f'#define VERTEXNAMES "{",".join(vertex_names)}"', file=formfile)
+            print(dedent(f'''\
+                        * Allow user to override which diagrams are to be defined
+                        #ifndef `DIAGRAMNAMES'
+                            #define DIAGRAMNAMES "{",".join(diagram_names)}"
+                        #endif
+                        #define VERTEXNAMES "{",".join(vertex_names)}"
+                        '''), file=formfile)
 
             logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
 
