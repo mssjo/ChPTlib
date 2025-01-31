@@ -8,7 +8,7 @@ from copy import copy, deepcopy
 from datetime import datetime
 from fractions import Fraction
 from pathlib import Path
-from textwrap import indent, dedent
+from textwrap import TextWrapper, indent, dedent, fill
 
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
@@ -919,7 +919,7 @@ class ChPTDiagramSet:
         if not self.legs:
             raise ChPTError("External legs not specified, please use 'X ...'")
         if not self.order:
-            raise ChPTError("No diagrams specified, plese use 'D ...'")
+            logger.warning("No diagrams specified", extra=logextra)
         if not self.independent_momenta:
             raise ChPTError(f"Independent momenta not specified, suggestion: M {' '.join(f'p{i+1}' for i in range(len(self.legs)-1))}")
         if not self.vector_replacements:
@@ -1349,12 +1349,9 @@ class ChPTDiagramSet:
         for elem in basis:
             self.parse_statement('', elem, None)
 
-        print(dedent(f"""\
+        print(fill(width=80, text=dedent(f"""\
             The following is the projection of scalar products onto the basis of inverse propagators.
-            Following each 'B' are the two vectors in the product and then {len(vector_prods)} numbers.
-            The ith number represents the coefficient in front of the squared momentum of propagator i
-            (i.e., the inverse propagator plus the squared mass) in the scalar product.
-            This can be pasted into the input file for future use."""))
+            Following each 'B' are the two vectors in the product, then {len(vector_prods)} numbers, then {len(self.independent_products)} more. The ith number among the {len(vector_prods)} first represents the coefficient in front of the squared momentum of propagator i (i.e., the inverse propagator plus the squared mass) in the scalar product. The remaining numbers represent multiples of the products {', '.join(f'{p}.{q}' for p,q in self.independent_products)} in that order. This can be pasted into the input file for future use.""")))
         for elem in basis:
             print(elem)
 
@@ -1512,118 +1509,30 @@ def print_info_FORM(formfile, extra=[], auto=True):
     print("", file=formfile)
 
 def print_file_help():
-    print(dedent("""\
-          The .chpt file format is a very simple way of describing multiloop diagrams in
-           ChPT using a formulation suitable for master integral reduction.
-          All non-empty lines contain a single statement, consisting of a single character
-           specifying the type of statement followed by a number of whitespace-separated
-           arguments.
-          The statement types are the following:
-            #  comment, ignore the rest of the line.
-            I  input the contents of other .xpt files given as arguments.
-            N  name the diagram set according to the single argument.
-               Exactly one N-statement must be given.
-            X  Specify the number of external legs (all diagrams have the same).
-               Each argument is a number followed by a character specifying the type of
-               particle. The particle types are M(eson), V(ector), A(xial vector), S(calar) and
-               P(seudoscalar). The particle specifier defaults to M(eson) if omitted. The
-               number of each type of particle may be specified only once, and defaults to
-               zero. External legs are assigned incoming momenta pi, with i being a 1-based
-               index, assigned incrementally with mesons first, then vectors, etc.
-            L  Define loop momenta, each one given as a separate argument.
-               Bear in mind that l1, l2, etc. may clash with the names of the LECs.
-            M  Define external momenta, each one given as a separate argument.
-               All independent external momenta should be explicitly given this way.
-            R  Specify a replacement to be applied to the expressions.
-               For example, this may be used to implement conservation of external momentum, or
-               to replace the automatically assigned external momenta with user-defined ones.
-               Takes two arguments, the left- and right-hand side of the replacement,
-               respectively. Example: "R p4 -(p1+p2+p3)" for 4-point diagrams. Bear in mind
-               that the expressions should work in both FORM and Mathematica.
-            P  Define a propagator.
-               Takes two arguments: the momentum and mass-squared of the propagator.
-               Propagators are numbered in the order they are specified, starting at 1. Bear in
-               mind that for master integral reduction, all scalar products of loop momenta,
-               and all scalar products of a loop momentum and an independent external momentum,
-               must be expressible as a linear combination of squared propagator momenta. Thus,
-               the number of propagators should be E*L + L*(L+1)/2 with L loops and E
-               independent external momenta; this may require the inclusion of propagators that
-               don't actually appear as a propagator in any diagram. The command 'basis' checks
-               that this has been done correctly. The mass-squared may be given as '*',
-               indicating flavor-dependent mass.
-            B  Specify how a product of momenta is expressed as a linear combination of squared
-               propagator momenta, as described under 'P'.
-               The first two arguments are the momenta being multiplied together, and the
-               following are the coefficients in front of each squared propagator momentum, in
-               the order the propagators were defined. The command 'basis' automatically
-               generates all necessary B-statements.
-            D  Initialize a new active diagram, and finalize the previous one, if any.
-               [VESGF]-statements act on an active diagram, so a D-statement must be made
-               before these can be used. It is recommended to give all other types of
-               statements before the first D-statement, as a preamble. The first argument is
-               compulsory, and gives the name of the diagram; this is combined with the diagram
-               set name to produce the full diagram name. The second, optional argument gives
-               the symmetry factor of the diagram. Exponents (^) and factorials (!) may be used
-               and will automatically be translated to FORM and Mathematica syntax.
-            V  Define a vertex for the active diagram.
-               There are three types of arguments, and they can be given in any order. If the
-               argument is of the form of zero or more N's followed by 'LO', or alternatively
-               'N', a number representing the number of N's, and 'LO', that specifies the order
-               of the vertex, defaulting to LO if omitted. If the argument would be accepted by
-               an X-statement, it specifies the number of legs on the vertex as described
-               there. Otherwise, the argument specifies the optional name of the vertex.
-               Alternatively, there may be a single argument, consisting of '@' and the name of
-               a previously defined diagram; this imports all vertices of that diagram as if
-               all its V-statements were pasted in place of the 'V @...' Vertices are numbered
-               in the order they are defined, starting at 1.
-            E  Define an edge for the active diagram.
-               There are three arguments: the number or name of the source vertex, the number
-               or name of the destination vertex, and the number or momentum of the propagator
-               represented by the edge. The momentum of the propagator flows from the source to
-                the destination. The propagator may instead be given as '*MASS', in which case
-               the momentum will be deduced from conservation. MASS should be the mass-squared
-               of the propagator, or another '*' to indicate flavor-dependent mass.
-               Alternatively, there may be a single argument, consisting of '@' and the name of
-               a previously defined diagram; this imports all edges of that diagram similarly
-               to 'V @...'. Note that vertex names and numbers may be different in this
-               diagram, so this should be used with caution.
-            S  Endow the current diagram with a symmetry factor.
-               The first argument should be an expression for the symmetry factor, by which the
-               diagram will be divided. Exponents (^) and factorials (!) may be used and will
-               automatically be translated to FORM and Mathematica syntax.
-               Optional symmetry factors may be given, prefixed by the name of a FORM
-               preprocessor variable and a colon. If that variable is defined at the moment the
-               diagram is created, that factor will be used instead (the first one in the order
-               given here takes precedence). There is an implicit NOSYMFACT:1 that overrides
-               other alternative symmetry factors.
-            G  Endow the current diagram with a group of permutations of its external legs,
-               over which it should be summed. There can be at most one G-statement per diagram.
-               The default arrangement of external momenta is that all momenta belonging to
-               each particle type are assigned in the order they appeared in the X-statements,
-               and for each type, they are assigned to all available legs on each vertex in the
-               order they appeared in the V-statements. The group can be specified in either of
-               three ways: one or more permutations, a distribution, or as a copy of another
-               diagram's group with 'G @...'. Permutations are given in cycle notation
-               [example: (1,2)(5,6,7,8)], and the group will be all distinct permutations that
-               can be formed by composing the specified permutations (including the identity).
-               A distribution is given as a bracket-enclosed list (example: [2,2,4]) whose
-               elements sum to the number of legs of the diagram. The group will be all ways of
-               distributing the external momenta into sets with the given list of sizes,
-               without regard to the order within each set, and without regard to the relative
-               order of sets of equal size. Each set-size may be optionally suffixed by an
-               alphanumeric label, and in that case the relative order is respected between
-               sets with different labels; the special label '*' is considered different from
-               all labels including itself. Normally, each set will correspond to the number of
-               external legs on each vertex, and the group will be all ways of assigning the
-               external legs, up to symmetries of the diagram which can be accounted for with
-               the labels; for instance, [2,2] is appropriate for a simple lollipop diagram
-               with four identical external legs, two on each vertex; [2a,2b] or [2*,2*] is
-               appropriate if the vertices are not interchangeable.
-            F  Equip a diagram with one or more flags.
-               By "flags" is meant FORM preprocessor variables that will be defined only while
-               processing the current diagram, for convenience when controlling any diagram-
-               specific procedures. The syntax is as for FORM -d options, i.e. NAME(=VALUE).
-          """))
+    def wrap(char = None):
+        width = 80
+        if char is None:
+            return TextWrapper(width=width, initial_indent='', subsequent_indent=' ')
+        else:
+            return TextWrapper(width=width, initial_indent=f' {char} ', subsequent_indent='    ')
+    print('\n'.join([
+          wrap().fill("The .chpt file format is a very simple way of describing multiloop diagrams in ChPT using a formulation suitable for master integral reduction. All non-empty lines contain a single statement, consisting of a single character specifying the type of statement followed by a number of whitespace-separated arguments."),
+          "The statement types are the following:",
+          wrap('#').fill("Comment, ignore the rest of the line."),
+          wrap('I').fill("Input the contents of other .xpt files given as arguments."),
+          wrap('N').fill("Name the diagram set according to the single argument. Exactly one N-statement must be given."),
+          wrap('X').fill("Specify the number of external legs (all diagrams have the same). Each argument is a number followed by a character specifying the type of particle. The particle types are M(eson), V(ector), A(xial vector), S(calar) and P(seudoscalar). The particle specifier defaults to M(eson) if omitted. The number of each type of particle may be specified only once, and defaults to zero. External legs are assigned incoming momenta pi, with i being a 1-based index, assigned incrementally with mesons first, then vectors, etc."),
+          wrap('L').fill("Define loop momenta, each one given as a separate argument. Bear in mind that l1, l2, etc. may clash with the names of the LECs."),
+          wrap('M').fill("Define external momenta, each one given as a separate argument. All independent external momenta should be explicitly given this way."),
+          wrap('R').fill("Specify a replacement to be applied to the expressions. For example, this may be used to implement conservation of external momentum, or to replace the automatically assigned external momenta with user-defined ones. Takes two arguments, the left- and right-hand side of the replacement, respectively. Example: 'R p4 -(p1+p2+p3)' for 4-point diagrams. Bear in mind that the expressions should work in both FORM and Mathematica."),
+          wrap('P').fill("Define a propagator. Takes two arguments: the momentum and mass-squared of the propagator. Propagators are numbered in the order they are specified, starting at 1. Bear in mind that for master integral reduction, all scalar products of loop momenta, and all scalar products of a loop momentum and an independent external momentum, must be expressible as a linear combination of squared propagator momenta. Thus, the number of propagators should be E*L + L*(L+1)/2 with L loops and E independent external momenta; this may require the inclusion of propagators that don't actually appear as a propagator in any diagram. The command 'basis' checks that this has been done correctly. The mass-squared may be given as '*', indicating flavor-dependent mass."),
+          wrap('B').fill("Specify how a product of momenta is expressed as a linear combination of squared propagator momenta, as described under 'P'. The first two arguments are the momenta being multiplied together, and the following are the coefficients in front of each squared propagator momentum, in the order the propagators were defined. The command 'basis' automatically generates all necessary B-statements."),
+          wrap('D').fill("Initialize a new active diagram, and finalize the previous one, if any. [VESGF]-statements act on an active diagram, so a D-statement must be made before these can be used. It is recommended to give all other types of statements before the first D-statement, as a preamble. The first argument is compulsory, and gives the name of the diagram; this is combined with the diagram set name to produce the full diagram name. The second, optional argument gives the symmetry factor of the diagram. Exponents (^) and factorials (!) may be used and will automatically be translated to FORM and Mathematica syntax."),
+          wrap('V').fill("Define a vertex for the active diagram. There are three types of arguments, and they can be given in any order. If the argument is of the form of zero or more N's followed by 'LO', or alternatively 'N', a number representing the number of N's, and 'LO', that specifies the order of the vertex, defaulting to LO if omitted. If the argument would be accepted by an X-statement, it specifies the number of legs on the vertex as described there. Otherwise, the argument specifies the optional name of the vertex. Alternatively, there may be a single argument, consisting of '@' and the name of a previously defined diagram; this imports all vertices of that diagram as if all its V-statements were pasted in place of the 'V @...' Vertices are numbered in the order they are defined, starting at 1."),
+          wrap('E').fill("Define an edge for the active diagram. There are three arguments: the number or name of the source vertex, the number or name of the destination vertex, and the number or momentum of the propagator represented by the edge. The momentum of the propagator flows from the source to  the destination. The propagator may instead be given as '*MASS', in which case the momentum will be deduced from conservation. MASS should be the mass-squared of the propagator, or another '*' to indicate flavor-dependent mass. Alternatively, there may be a single argument, consisting of '@' and the name of a previously defined diagram; this imports all edges of that diagram similarly to 'V @...'. Note that vertex names and numbers may be different in this diagram, so this should be used with caution."),
+          wrap('S').fill("Endow the current diagram with a symmetry factor. The first argument should be an expression for the symmetry factor, by which the diagram will be divided. Exponents (^) and factorials (!) may be used and will automatically be translated to FORM and Mathematica syntax. Optional symmetry factors may be given, prefixed by the name of a FORM preprocessor variable and a colon. If that variable is defined at the moment the diagram is created, that factor will be used instead (the first one in the order given here takes precedence). There is an implicit NOSYMFACT:1 that overrides other alternative symmetry factors."),
+          wrap('G').fill("Endow the current diagram with a group of permutations of its external legs, over which it should be summed. There can be at most one G-statement per diagram. The default arrangement of external momenta is that all momenta belonging to each particle type are assigned in the order they appeared in the X-statements, and for each type, they are assigned to all available legs on each vertex in the order they appeared in the V-statements. The group can be specified in either of three ways: one or more permutations, a distribution, or as a copy of another diagram's group with 'G @...'. Permutations are given in cycle notation [example: (1,2)(5,6,7,8)], and the group will be all distinct permutations that can be formed by composing the specified permutations (including the identity). A distribution is given as a bracket-enclosed list (example: [2,2,4]) whose elements sum to the number of legs of the diagram. The group will be all ways of distributing the external momenta into sets with the given list of sizes, without regard to the order within each set, and without regard to the relative order of sets of equal size. Each set-size may be optionally suffixed by an alphanumeric label, and in that case the relative order is respected between sets with different labels; the special label '*' is considered different from all labels including itself. Normally, each set will correspond to the number of external legs on each vertex, and the group will be all ways of assigning the external legs, up to symmetries of the diagram which can be accounted for with the labels; for instance, [2,2] is appropriate for a simple lollipop diagram with four identical external legs, two on each vertex; [2a,2b] or [2*,2*] is appropriate if the vertices are not interchangeable."),
+          wrap('F').fill("Equip a diagram with one or more flags. By 'flags' is meant FORM preprocessor variables that will be defined only while processing the current diagram, for convenience when controlling any diagram- specific procedures. The syntax is as for FORM -d options, i.e. NAME(=VALUE).")]))
 
 def setup_logging(args):
 
