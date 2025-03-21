@@ -38,6 +38,9 @@
     #call renormNLO(H1,-1/8)
     #call renormNLO(H2,5/24)
 #elseif `NF'==2
+    .sort
+    symbols gamma1,...,gamma8;
+
     #call renormNLO(l1,1/3)
     #call renormNLO(l2,2/3)
     #call renormNLO(l3,-1/2)
@@ -45,9 +48,18 @@
     #call renormNLO(l5,-1/6)
     #call renormNLO(l6,-1/3)
     #call renormNLO(l7,0)
+    #do I=1,8
+        #call renormNLO(l`I',gamma`I')
+    #enddo
+
 *     TODO: check these, since Gasser&Leutwyler use weird conventions
-*     The -1/12 is deduced from what makes the NLO HVP work
-    #call renormNLO(h1,-1/12)
-    #call renormNLO(h2,0)
-    #call renormNLO(h3,2)
+* *     The -1/12 is deduced from what makes the NLO HVP work
+*     #call renormNLO(h1,-1/12)
+*     #call renormNLO(h2,0)
+*     #call renormNLO(h3,2)
+
+*     This follows Gasser&Leutwyler
+    #call renormNLO(h1,2)
+    #call renormNLO(h2,-1/12)
+    #call renormNLO(h3,0)
 #endif
