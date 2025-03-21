@@ -44,27 +44,27 @@ functions <bb1>,...,<bb`NP'>;
 local vertex`POWERINFO' =
     #include- ChPTdiagram_lagrangian.hf
     ;
-#ifdef `NF'
-    #if `NP'==4
-        #if `NF'==3
-            id L0 = 0;
-        #elseif `NF'==2
-            id L0 = 0;
-            id L1 = l1/4;
-            id L2 = l2/4;
-            id L3 = 0;
-            id L4 = l4/8;
-            id L5 = 0;
-            id L6 = (l3+l4)/16;
-            id L7 = l7/-16;
-            id L8 = 0;
-            id L9 = l6/-2;
-            id L10 = l5;
-            id H1 = h1;
-            id H2 = h2;
-        #endif
-    #endif
-#endif
+* This is now handled in p4lagrangian
+* #ifdef `NF'
+*     #if `NP'==4
+*         #if `NF'==3
+*             id L0 = 0;
+*         #elseif `NF'==2
+*             id L1 = l1/4;
+*             id L2 = l2/4;
+*             id L3 = 0;
+*             id L4 = 0;
+*             id L5 = 0;
+*             id L6 = l3/16;
+*             id L7 = l7/-16;
+*             id L8 = 0;
+*             id L9 = l6/-2;
+*             id L10 = l5;
+*             id H1 = h1;
+*             id H2 = h2;
+*         #endif
+*     #endif
+* #endif
 
 #ifdef `SELECTLEC'
     if(match(`SELECTLEC')==0) discard;
@@ -150,7 +150,8 @@ label Vdone;
     #endif
 
 *     Make the traces cyclic
-*     This has little power since it isn't automatically combined with index renaming, but it's better than nothing!
+*     This has little power since it isn't automatically combined with index
+*      renaming, but it's better than nothing!
     id tr(?a) = Tr(?a);
 
 *     Finalize the transformations

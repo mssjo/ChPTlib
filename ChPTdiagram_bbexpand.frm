@@ -1,20 +1,10 @@
-* Expands individual Lagrangian building blocks to the desired order in the fields.
-* Intended as an auxiliary to ChPTdiagram_bblocks.frm
+* Expands Lagrangian building blocks to the desired order in the fields.
+* Intended as an auxiliary to ChPTdiagram_lagrexpand.frm
 
 #-
 #include- ChPTdiagram_bblocks.hf
 
-* Load integer partitions
-#procedure ipart(N,UO)
-    #system `MAKECMD' partitions/`N'`UO'.hf
-    #include- partitions/`N'`UO'.hf
-#endprocedure
-#procedure upart(N)
-    #call ipart(`N',u)
-#endprocedure
-#procedure opart(N)
-    #call ipart(`N',o)
-#endprocedure
+#setexternalattr stderr=terminal
 
 * Apply derivatives
 #procedure deriv(MU)
@@ -92,6 +82,93 @@
     #call deriv(mu)
 #endprocedure
 
+#procedure expandNGmatrix(PM)
+* This handles the expansion of the Nambu-Goldstone matrix, which involves almost
+* all dependence on PAR
+    #if `PAR'==SQRT
+*         The parametrization U = i_ Phi + sqrt(1 - Phi^2) (omitting normalization)
+        #if (`NM'==1)
+            i_ * `PM'Phi/(sqrt2*F);
+        #elseif ({`NM'%2}!=0)
+            0;
+        #else
+            (trPhi(2)/(4*F^2))^{`NM'/2} * coeff({`NM'/2});
+            id coeff(n?) = -binom_(2*n,n) / ( 2^(2*n) * (2*n-1) );
+
+            id trPhi(2) = tr(Phi,Phi);
+        #endif
+    #elseif `PAR'==GEN
+*         The general parametrization is a bit special, since the field redefenition
+*         causes mixing between different NM. We use partitions to help.
+
+*         Rather than expanding exp(Phi) (omitting normalization) up to order NM
+*          and then expanding the Phi's again, which would lead to lots of discarded terms,
+*          list all ways of getting NM from up to NM Phi's, each expanded to just the
+*          necessary order.
+        #if `NM'>0
+            #external ipart --form --odd --multiplicity `NM'
+            #fromexternal+
+                ;
+        #else
+            ipart();
+        #endif
+        id ipart(?a) = ipart(?a) * (`PM'i_/(sqrt2*F))^nargs_(?a) * invfac_(nargs_(?a));
+        repeat id ipart(n?, ?a) = Phi(n,0) * ipart(?a);
+        id ipart() = 1;
+
+        #call substitute(Phi,0)
+
+    #else
+*         All other parametrizations are variants on the exponential
+        (`PM'i_*Phi/(sqrt2*F))^`NM'
+        #if `NM'>=2
+            #switch `PAR'
+                #case EXP
+*                     Exponential parametrization
+                    * invfac_(`NM');
+                    #break
+                #case CAY
+*                     Cayley parametrization
+                    / 2^{`NM'-1};
+                    #break
+                #case MIN
+*                     Minimal parametrization
+                    #if {`NM'%2}
+                        * 0;
+                    #else
+                        * sign_({`NM'/2+1}) * / 2^{`NM'-2} * binom_({`NM'-2}, {`NM'/2-1})/`NM';
+                    #endif
+                    #break
+                #case BIJ
+*                     That parametrization Hans Bijnens used that one time
+                    #if `NM'==2
+                        / 2;
+                    #elseif `NM'==3
+                        / 8;
+                    #else
+                        #switch {`NM'%4}
+                            #case 0
+                            #case 2
+                                * 0;
+                                #break
+                            #case 1
+                                * -fac_({(`NM'-1)/2-2}) * invfac_({(`NM'-1)/4-1}) / 2^{7*((`NM'-1)/4) - 1};
+                                #break
+                            #case 3
+                                * +fac_({(`NM'+1)/4-2}) / 2^{5*((`NM'+1)/4)-1};
+                        #endswitch
+                    #endif
+                    #break
+                #default
+                    #message[bbexpand]~~~ ERROR: unrecognized parametrization PAR=`PAR'
+                    #terminate
+            #endswitch
+        #else
+            ;* coefficients 0 and 1 are always 1
+        #endif
+    #endif
+#endprocedure
+
 
 * Obtain the building block from its definition, taking some switchy shortcuts to avoid code duplication.
 * Most definitions are simply defined in terms of other building blocks, and these are loaded to
@@ -106,42 +183,43 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
     #switch `BBLOCK'
         #case Phi
 *             Only needed in the general parametrization
-            #ifndef `GENPAR'
-                #terminate[bbexpand]~~~ ERROR: nontrivial Phi-expansion without GENPAR
+            #if `PAR'!=GEN
+                #message[bbexpand]~~~ ERROR: nontrivial Phi-expansion without PAR=GEN
+                #terminate
             #endif
             #if `NM'==0
                 1;
             #elseif {`NM'%2}==0
                 0;
             #else
-                #call opart({`NM'-1})
-                    ;
                 #if `RANK' != 0
                     #message[bbexpand]~~~ ERROR: derivatives must be applied after expanding u -> Phi
                     #terminate
                 #endif
 
+*                 This implements footnote 11 in Bijnens, Husek & Sjo (2021)
+*                 which is of course the best footnote ever
+                #external ipart --form --ordered {`NM'-1}
+                #fromexternal+
+                    ;
 *                 Prepend 1 + (number of 1's) to the partition, remove 1's
                 id ipart(?x) = ipart(1, ?x);
                 repeat id ipart(n?, ?x, 1) = ipart(n+1, ?x);
 *                 Turn the partition into a product of traces,
 *                  except the first which becomes a traceless product of untraced phi's
-                id ipart(n?, ?x) = (Phi^n - 1/Nf*trPhi(n)) * ipart(?x) * a(n, ?x);
+                id ipart(n?, ?x) = (Phi^n - 1/`NF'*trPhi(n)) * ipart(?x) * a(n, ?x);
                 repeat id ipart(?x, n?) = ipart(?x) * trPhi(n);
                 id ipart() = 1;
 
-                #ifndef `NFGENERAL'
-                    id 1/Nf = 1/`NF';
-                #endif
-
                 id a(1) = 1;
 
-                .sort:>>Phi GENPAR<<;
+                .sort:>>Phi PAR=GEN<<;
 
 *                 Turn trPhi into an explicit trace
                 id trPhi(1) = 0;
                 repeat id trPhi(n?pos_, ?x) = trPhi(n-1, Phi,?x);
                 id trPhi(0, ?x) = tr(?x);
+
             #endif
             #break
 
@@ -170,38 +248,7 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
         #case u
 *             The basic chiral field u
             #if `RANK' == 0
-                #ifdef `KALPAR'
-*                 Kalman's preferred parametrization
-                    #if (`NM'==1)
-                        i_ * `PM'Phi/(sqrt2*F);
-                    #elseif ({`NM'%2}!=0)
-                        0;
-                    #else
-                        (trPhi(2)/(4*F^2))^{`NM'/2} * kalmancoeff({`NM'/2});
-                        id kalmancoeff(n?) = -binom_(2*n,n) / ( 2^(2*n) * (2*n-1) );
-
-                        id trPhi(2) = tr(Phi,Phi);
-                    #endif
-                #else
-*                 Exponential parametrization
-                    (`PM'i_*Phi/(sqrt2*F))^`NM' * invfac_(`NM');
-
-*                     ...with general reparametrization of the field
-                    #ifdef `GENPAR'
-                        id Phi^`NM' =
-                            #call upart(`NM')
-                            ;
-                        repeat;
-                            id ipart(n?odd_, ?a) = Phi(n,0)/F^(n-1) * ipart(?a);
-                            al ipart(n?even_, ?a) = 0;
-                        endrepeat;
-                        id ipart() = 1;
-
-                        #call substitute(Phi,0)
-
-                    #endif
-                #endif
-
+                #call expandNGmatrix(`PM')
             #elseif `RANK'>1
                 #call covar(u,{`RANK'-1},h,h)
             #else
@@ -304,13 +351,13 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #break
 
         #default
-            #ifdef `STRICT'
+*             #ifdef `STRICT'
                 #message[bbexpand]~~~ ERROR: unknown building block "`BBLOCK'"
                 #terminate
-            #else
-                #message[bbexpand]~~~ WARNING: definition of "`BBLOCK'" not known, setting to zero
-                0;
-            #endif
+*             #else
+*                 #message[bbexpand]~~~ WARNING: definition of "`BBLOCK'" not known, setting to zero
+*                 0;
+*             #endif
     #endswitch
     ;
 

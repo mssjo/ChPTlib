@@ -169,20 +169,21 @@
 *     Enact substitution, assuming first arguments are the desired powers of the fields
 *     First deal with some primitives (heavily version-dependent!)
 *     Current implementation is for the simple mesonic + QED ChPT.
-    #if ((`BBLOCK'==chi)||(`BBLOCK'==chidag))&&(`RANK'==0)
+    #if ((`BBLOCK'==chi)||(`BBLOCK'==chidag))
         #ifndef `DRYRUN'
-            id bb?{chi,chidag}(Nm?,Nv?) = chi * delta_(Nm,0) * delta_(Nv,0);
+*             chi is a constant
+            id bb?{chi,chidag}(Nm?,Nv?,?derivs) = chi * delta_(Nm,0) * delta_(Nv,0) * delta_(nargs_(?derivs),0);
         #endif
-    #elseif ((`BBLOCK'==chitil)||(`BBLOCK'==chitildag))&&(`RANK'==0)
+    #elseif ((`BBLOCK'==chitil)||(`BBLOCK'==chitildag))
         #ifndef `DRYRUN'
 *             chi-tilde simplifies to chi^(Nf-1) in the equal-mass case
-            id bb?{chitil,chitildag}(Nm?,Nv?) =
+            id bb?{chitil,chitildag}(Nm?,Nv?,?derivs) =
                 #if (isdefined(PKEMASS)==0)&&(isdefined(FULLMASS)==0)&&(isdefined(NFGENERAL)==0)
                     chi^{`NF'-1}
                 #else
                     chitil
                 #endif
-                * delta_(Nm,0) * delta_(Nv,0);
+                * delta_(Nm,0) * delta_(Nv,0) * delta_(nargs_(?derivs),0);
         #endif
     #elseif (`BBLOCK'==lr)&&(`RANK'==1)
         #ifndef `DRYRUN'
