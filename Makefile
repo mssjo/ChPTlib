@@ -2,10 +2,11 @@ include names.make
 
 SHELL := /bin/bash
 
-FORM = tform -w4 -l -q -d QUIET
+FORM = tform -w4 -l -d QUIET
 ifdef NP
 	FORM := $(FORM) -d ORDER=$(NP)
 endif
+
 
 $(VERTEXFILE): ChPTdiagram_lagrexpand.frm ChPTdiagram_p$(NP)lagrangian.hf ChPTdiagram_bblocks.hf ChPTdiagram_bbexpand.frm
 	$(info Generating $(VERTEXFILE))
@@ -23,21 +24,13 @@ $(BBLOCKDIR)/rhs/%on$(NB).hf : partitions/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
 	mkdir -p $(BBLOCKDIR)/rhs
 	$(BBLOCKDIR)/rhs.sh $* $(NB)
 
-partitions/%u.hf :
-	mkdir -p partitions
-	ipart -uF $*
-partitions/%o.hf :
-	mkdir -p partitions
-	ipart -oF $*
-partitions/%uf$(NB).hf :
-	mkdir -p partitions
-	ipart -F -uf $(NB) $*
-
 $(CHPTDIR)/flavs/flav$(NM).hf : make_flav.py
 	mkdir -p flavs
 	python make_flav.py $(NM)
 
-.PHONY: clean
+.PHONY: clean, vertex, bblock
+vertex : $(VERTEXFILE)
+bblock : $(BBLOCKFILE)
 clean :
 	rm -f vertices/*
 	rm -rf bblocks/bb*

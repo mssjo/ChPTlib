@@ -31,15 +31,13 @@
     #redefine FORMOPTS "`FORMOPTS' -d CAYHAM"
     #redefine MAKEOPTS "`MAKEOPTS' CAYHAM=1"
 #endif
-#ifdef `KALPAR'
-    #redefine NAMESUFFIX "`NAMESUFFIX'_KALPAR"
-    #redefine FORMOPTS "`FORMOPTS' -d KALPAR"
-    #redefine MAKEOPTS "`MAKEOPTS' KALPAR=1"
-#endif
-#ifdef `GENPAR'
-    #redefine NAMESUFFIX "`NAMESUFFIX'_GENPAR"
-    #redefine FORMOPTS "`FORMOPTS' -d GENPAR"
-    #redefine MAKEOPTS "`MAKEOPTS' GENPAR=1"
+#ifdef `PAR'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_`PAR'PAR"
+    #redefine FORMOPTS "`FORMOPTS' -d PAR=`PAR'"
+    #redefine MAKEOPTS "`MAKEOPTS' PAR=`PAR'"
+#else
+    #redefine NAMESUFFIX "`NAMESUFFIX'_EXPPAR"
+    #redefine MAKEOPTS "`MAKEOPTS' PAR=EXP"
 #endif
 #ifdef `TRF'
     #redefine NAMESUFFIX "`NAMESUFFIX'_TRF"
