@@ -14,17 +14,6 @@
 * Number of external particles
 #call require(NEXT)
 
-* GENeral PARametrization from the sixmeson paper
-#ifdef `GENPAR'
-    cfunction a;
-#endif
-* The parametrization U = i_ Phi + sqrt(1 - Phi^2) (omitting normalization)
-* Only valid for NF=2
-* KAL is for Kalman Szabo, whose preference for it prompted me to implement it.
-#ifdef `KALPAR'
-    #define NF "2"
-#endif
-
 * Options for masses
 #ifdef `FULLMASS'
     #message[ChPTdiagram]~~~ ERROR: full-mass ChPT not supported yet!
@@ -32,6 +21,12 @@
 #endif
 * Three distinct masses: Pion, Kaon, Eta
 #ifdef `PKEMASS'
+    #ifdef `NF'
+        #if `NF'!=3
+            #message~~~[defs]~~~ ERROR: PKEMASS fixes NF=3; NF should not be defined separately
+            #terminate
+        #endif
+    #endif
     #define NF "3"
     cfunctions propmatrix, Prop,Prop8,Prop88;
     symbols mhat,ms;
@@ -39,6 +34,38 @@
 #else
     #define EQUALMASS
     symbols mp2, m0p2;
+#endif
+
+* Options for NG manifold parametrization
+#ifndef `PAR'
+    #message[defs]~~~ PAR not defined, parametrization defaulting to EXP
+    #define PARAM "EXP"
+#else
+    #switch `PAR'
+        #case GEN
+*             General parametrization as per Bijnens, Husek & Sjo, 2021
+            cfunction a;
+            #break
+        #case SQRT
+*             The parametrization U = i_ Phi + sqrt(1 - Phi^2) (omitting normalization)
+*             (formerly known as KALPAR since Kalman Szabo suggested using it)
+            #ifdef `NF'
+                #if `NF'!=2
+                    #message[defs]~~~ ERROR: PAR=SQRT fixes NF=2; NF should not be defined separately
+                    #terminate
+                #endif
+            #endif
+            #define NF "2"
+            #break
+        #case EXP
+        #case CAY
+        #case MIN
+        #case BIJ
+            #break
+        #default
+            #message~~~[defs]~~~ ERROR: unknown parametrization "`PAR'"
+            #terminate
+    #endswitch
 #endif
 
 * Scalar QED + phi^4 is a neat reskin of ChPT
@@ -55,7 +82,6 @@
     #define NF "Nf"
     symbol Nf;
 #endif
-
 
 ********************************************************************************
 * Internal momenta, Lorentz indices
@@ -113,25 +139,48 @@ symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
 #define LECS "B0,F,Fpi"
 
 #ifdef `NFGENERAL'
-    #define NLOLECS "<L0,L0r>,...,<L10,L10r>,H1,H2,H1r,H2r"
-    #define NNLOLECS "<K1,K1r>,...,<K115,K115r>,<Kt1>,...,<Kt16>"
-    #define N3LOLECS "<K8x1,K8r1>,...,<K8x1862,K8r1862>"
+    #define NLOLECSBARE "L0,...,L10,H1,H2"
+    #define NNLOLECSBARE "K1,...,K115"
+    #define N3LOLECSBARE "K8x1,...,K8x1862"
 #else
     #if `NF'==3
-        #define NLECxNNLO "94"
-        #define NLOLECS "<L0,L0r>,...,<L10,L10r>,H1,H2,H1r,H2r"
-        #define NNLOLECS "<C1,C1r>,...,<C94,C94r>,<Ct1>,...,<Ct16>"
-        #define N3LOLECS "<C8x1,C8r1>,...,<C8x1254,C8r1254>"
+        #define NLOLECSBARE "L1,...,L10,H1,H2,"
+        #define NNLOLECSBARE "C1,...,C94"
+        #define N3LOLECSBARE "C8x1,...,C8x1254"
     #elseif `NF'==2
-        #define NLOLECS "<l1,l1r,l1b>,...,<l8,l8r,l8b>,<L0>,...,<L10>,H1,H2,h1,h2,h3,h1r,h2r,h3r"
-        #define NNLOLECS "<c1,c1r>,...,<c57,c57r>,<ct1>,...,<ct10>"
-        #define N3LOLECS "<c8x1,c8r1>,...,<c8x475,c8r475>"
+        #define NLOLECSBARE "l1,...,l8,h1,h2,h3"
+        #define NNLOLECSBARE "c1,...,c57"
+        #define N3LOLECSBARE "c8x1,...,c8x475"
     #endif
 #endif
+#do NXLO={NLO,NNLO,N3LO}
+    #define LECVARS "r"
+    #ifdef `QRENORM'
+        #redefine LECVARS "`LECVARS',q"
+    #endif
+    #if `NF'==2
+        #redefine LECVARS "`LECVARS',b"
+    #endif
+    #do LEC={``NXLO'LECSBARE'}
+        #do LECVAR={`LECVARS'}
+*             For some reason, #ifndef fails here
+            #if isdefined(`NXLO'LECS`TOUPPER_(`LECVAR')')==0
+                #define `NXLO'LECS`TOUPPER_(`LECVAR')' "`LEC'`LECVAR'"
+            #else
+                #redefine `NXLO'LECS`TOUPPER_(`LECVAR')' "``NXLO'LECS`TOUPPER_(`LECVAR')'',`LEC'`LECVAR'"
+            #endif
+        #enddo
+    #enddo
+    #define `NXLO'LECS "``NXLO'LECSBARE'"
+    #do LECVAR={`LECVARS'}
+        #redefine `NXLO'LECS "``NXLO'LECS',``NXLO'LECS`TOUPPER_(`LECVAR')''"
+    #enddo
+    #undefine LECVARS
+#enddo
 * Generic dummy LECs
 #define DUMMYLECS "p4LEC,p6LEC,p8LEC"
 symbols `DUMMYLECS';
-* All LECs
+* All LECs up to the relevant order
 #ifdef `ORDER'
     #if `ORDER'>=4
         #redefine LECS "`LECS',`NLOLECS'"
@@ -147,6 +196,30 @@ symbols `DUMMYLECS';
 #endif
 symbols `LECS';
 set LECs: `LECS';
+
+#procedure pickLEC()
+* If PICKLEC is set to a LEC, only terms containing that are kept
+* If PICKLECS is set to a list of LECs, only terms containing those are kept
+* If PICLECORDER is set to an N*LO order, only terms containing LECs of that order are kept
+* Otherwise, this procedure does nothing.
+
+    #define MUTEX "PICKLEC,PICKLECS,PICKLECORDER"
+    #call mutex()
+
+    #ifdef `PICKLEC'
+        if(count(`PICKLEC',1)==0) discard;
+    #endif
+    #ifdef `PICKLECS'
+        if(count(F,0
+        #do `LEC'={`PICKLECS'}
+            ,`LEC',1
+        #enddo
+        )==0) discard;
+    #endif
+    #ifdef `PICKLECORDER'
+        if(match(L?{``PICKLECORDER'LECS'})==0) discard;
+    #endif
+#endprocedure
 
 ********************************************************************************
 * Loop integrals
