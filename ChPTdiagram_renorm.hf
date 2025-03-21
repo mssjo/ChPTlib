@@ -11,16 +11,12 @@
         cfunction C;
     #endif
 
-    #if `ORD' == LO
-        #redefine ORD "2"
-    #elseif `ORD' == NLO
-        #redefine ORD "4"
-        #define NORDER "NLO"
-    #elseif `ORD' == N2LO || `ORD' == NNLO
-        #redefine ORD "6"
-    #elseif `ORD' == N3LO || `ORD' == NNNLO
-        #redefine ORD "8"
-    #endif
+    #do N=2,8,2
+        #if `ORD' == `NORDER`N''
+            #redefine ORD "`N'"
+            #breakdo
+        #endif
+    #enddo
 
     #if (isdefined(NORENORM)==0)&&(`ORD'<=`ORDER')
         #ifdef `SQED'
@@ -47,13 +43,19 @@
     #endif
 
     #if isdefined(PMCONV)
-        id [(cmu)^(d-4)]^m? = C(eps,mp2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1))^n * invfac_(n));
+        id [(cmu)^(d-4)]^m? = C(eps,mu)^m * sum_(n,0,`MAXEPS', (m * eps)^n * invfac_(n));
     #elseif isdefined(HNCONV)
         id [(cmu)^(d-4)]^m? = C(eps,mp2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1 - gammaE))^n * invfac_(n)) / [Gam(1+eps)];
     #else
         id [(cmu)^(d-4)]^m? = sum_(n,0,`MAXEPS', (m * eps * ctil)^n * invfac_(n));
     #endif
     id Lambda = kappa / [d-4];
+
+    #ifdef `QRENORM'
+        #do L={``NORDER`ORD''LECSBARE'}
+            id `L'r = kappa^{(`ORD'-2)/2} * `L'q;
+        #enddo
+    #endif
 
     #call expandD(`MAXEPS')
 
