@@ -67,4 +67,5 @@ with open(f"flavs/flav{N}.hf", 'w') as out:
         #define PKE{N} "{','.join(['p'] * N)}"
         {endl.join(f'#define Tr{tag} "{struct}"' for tag,struct in structs.items())}
         {f'#define cayham{N} "{endl}{f"{endl}    ".join(reversed(cayham))}"' if cayham else ''}
+        #define Srel{N} ""
         """), file=out)
