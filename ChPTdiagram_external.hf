@@ -15,7 +15,7 @@
             #define PKELIST "`PKE`FLAVS''"
             #message[setPKE]~~~ PKELIST not defined, defaulting via FLAVS to PKE`FLAVS'
         #else
-            #message[setPKE]~~~ ERROR: setPKE needs PKELIST defined
+            #message[setPKE]~~~ ERROR: setPKE needs PKELIST (or FLAVS) defined
             #terminate
         #endif
     #endif
