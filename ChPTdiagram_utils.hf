@@ -86,7 +86,8 @@
 #procedure restore(NAME)
     #call load(`NAME')
     #include- names.hf
-    #message[restore]~~~ Restoring `NAME' to active expressions ("x" appended to names)
+    #message[restore]~~~ Restoring `NAME' to active expressions
+    #message[restore]~~~ ("x" appended to names)
 *     #ifdef `TAG'
 *         #include+ `SAVENAME'_restore_tagged.hf
 *     #else
