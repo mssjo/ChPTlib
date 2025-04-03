@@ -135,8 +135,10 @@ set loops: `LOOPMOMENTA';
 ********************************************************************************
 * LECs
 
-symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
-#define LECS "B0,F,Fpi"
+#define LECS "B0,F,Fp"
+#ifdef `PKEMASS'
+    #redefine LECS "`LECS',Fk,Fe"
+#endif
 
 #ifdef `NFGENERAL'
     #define NLOLECSBARE "L0,...,L10,H1,H2"
@@ -144,7 +146,7 @@ symbol B0, M,F, Mpi,Fpi, MK,FK, Meta,Feta;
     #define N3LOLECSBARE "K8x1,...,K8x1862"
 #else
     #if `NF'==3
-        #define NLOLECSBARE "L1,...,L10,H1,H2,"
+        #define NLOLECSBARE "L1,...,L10,H1,H2"
         #define NNLOLECSBARE "C1,...,C94"
         #define N3LOLECSBARE "C8x1,...,C8x1254"
     #elseif `NF'==2
@@ -194,7 +196,7 @@ symbols `DUMMYLECS';
 #else
     #redefine LECS "`LECS',`NLOLECS',`NNLOLECS',`N3LOLECS'"
 #endif
-symbols `LECS';
+symbols `LECS',`NLOLECS',`NNLOLECS',`N3LOLECS';
 set LECs: `LECS';
 
 #procedure pickLEC()
@@ -203,8 +205,8 @@ set LECs: `LECS';
 * If PICLECORDER is set to an N*LO order, only terms containing LECs of that order are kept
 * Otherwise, this procedure does nothing.
 
-    #define MUTEX "PICKLEC,PICKLECS,PICKLECORDER"
-    #call mutex()
+    #define PICKLECVARS "PICKLEC,PICKLECS,PICKLECORDER"
+    #call mutex(PICKLECVARS)
 
     #ifdef `PICKLEC'
         if(count(`PICKLEC',1)==0) discard;
@@ -280,7 +282,12 @@ cfunctions prop, coeff;
 functions sum, derivs, dummy;
 
 symbols d, [d], <[d-1]>,...,<[d-4]>;
-symbols kappa,L, eps,etil, log4pi;
+symbols kappa, eps,etil, log4pi;
+symbols L, Lp
+    #ifdef `PKEMASS'
+        ,Lk,Le
+    #endif
+    ;
 
 function cross, mirror, cycle, permute, replace;
 
@@ -304,5 +311,45 @@ symbol pi;
         #endif
         ;
 #endprocedure
+
+********************************************************************************
+* Conversion between different Nf
+
+#procedure invertcayham(ORD,FROM,TO)
+    #if (`ORD' == 4)||(`ORD' == NLO)
+        #if (`FROM' == 3)&&(`TO' == N)
+*             Bijnens, Colangelo & Ecker '99 eq. (3.15)
+            id L1 = L0/2 + L1;
+            id L2 = L0 + L2;
+            id L3 = -2*L0 + L3;
+        #elseif (`FROM' == 2)&&(`TO' == N)
+*             Bijnens, Colangelo & Ecker '99 eq. (3.16)
+            id l1 = -2*L0 + 4*L1 + 2*L3;
+            id l2 = 4*(L0 + L2);
+            id l3 = 4*(-2*L4 - L5 + 4*L6 + 2*L8);
+            id l4 = 4*(2*L4 + L5);
+            id l5 = L10;
+            id l6 = -2*L9;
+            id l7 = -8*(2*L7 + L8);
+        #elseif (`FROM' == 2)&&(`TO' == 3)
+*             Deduced from the above
+            id l1 = 4*L1 + 2*L3;
+            id l2 = 4*L2;
+            id l3 = 4*(-2*L4 - L5 + 4*L6 + 2*L8);
+            id l4 = 4*(2*L4 + L5);
+            id l5 = L10;
+            id l6 = -2*L9;
+            id l7 = -8*(2*L7 + L8);
+        #else
+            #message[invertcayham]~~~ Invalid: `FROM' -> `TO'
+            #terminate
+        #endif
+    #elseif (`ORD' == 6)||(`ORD' == NNLO)
+        #include- invert_cayham_`FROM'to`TO'.hf
+    #else
+        #message[invertcayham]~~~ Not supported: order `ORD'
+    #endif
+#endprocedure
+
 
 #endif
