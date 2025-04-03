@@ -128,7 +128,7 @@ label Vdone;
 
 *     Simplify equal-mass case
     #if (isdefined(FULLMASS)==0)&&(isdefined(PKEMASS)==0)
-        id chi = mp2;
+        id chi = m0p2;
     #endif
 
     id 1/sqrt2 = sqrt2/2;

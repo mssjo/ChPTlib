@@ -62,4 +62,6 @@
     #call renormNLO(h1,2)
     #call renormNLO(h2,-1/12)
     #call renormNLO(h3,0)
+
+    id L?{h1r,h2r,h3r} = 0;
 #endif

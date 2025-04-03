@@ -6,13 +6,13 @@
 #procedure renormNNLO(LEC,GAMMA1,GAMMA2,GAMMAL)
     id `LEC' = [(cmu)^(d-4)]^2/F^2 * (`LEC'r
         - (`GAMMA2') * Lambda^2
-        - (`GAMMA1'*kappa + `GAMMAL') * Lambda
+        - ((`GAMMA1')*kappa + (`GAMMAL')) * Lambda
         );
 #endprocedure
 
-.sort
 
 #ifdef `NFGENERAL'
+    .sort:>>renormalize NFGENERAL<<;
     #call renormNNLO(K1,5/96-5/6912*`NF'^2,7/16+5/288*`NF'^2,1/6*`NF'*L0r+3/4*`NF'*L3r+7/3*L1r+35/6*L2r)
     #call renormNNLO(K2,11/3456*`NF',41/576*`NF',`NF'*L1r+1/3*`NF'*L2r+5/6*L0r+3/4*L3r-1/8*L9r)
     #call renormNNLO(K3,-1/64-1/2304*`NF'^2,-3/16,-L1r-5/2*L2r)
@@ -129,8 +129,8 @@
     #call renormNNLO(K114,0,-1/18*`NF'^2,-4/3*`NF'*L9r)
     #call renormNNLO(K115,0,1/72*`NF'^2,1/3*`NF'*L9r)
 #elseif `NF' == 3
-* TODO: check C67 which is missing from the table
-    symbols Gamma1x67,Gamma2x67,GammaLx67;
+    .sort:>>renormalize NF=3<<;
+    autodeclare symbol Gamma;
 
     #call renormNNLO(C1,71/768,17/32,7/3*L1r+35/6*L2r+9/4*L3r-L9r)
     #call renormNNLO(C2,1/128,15/64,3*L1r+L2r+5/6*L3r)
@@ -198,7 +198,9 @@
     #call renormNNLO(C64,-5/144,-4/3,-32/3*L1r-32/9*L2r-157/54*L3r-6*L4r-L5r+1/2*L9r)
     #call renormNNLO(C65,5/192,-1/2,2/3*L1r-11/3*L2r-16/9*L3r-3/2*L5r+3/4*L9r)
     #call renormNNLO(C66,115/1152,-1/32,2/3*L1r+L2r-5/6*L3r-5/4*L9r)
-    #call renormNNLO(C67,Gamma1x67,Gamma2x67,GammaLx67)
+*     Derived from NFGENERAL that this omitted row is zero
+*     #call renormNNLO(C67,Gamma1x67,Gamma2x67,GammaLx67)
+    #call renormNNLO(C67,0,0,0)
     #call renormNNLO(C68,-7/64,-3/4,-12*L1r-2*L2r-8/3*L3r)
     #call renormNNLO(C69,29/1152,-1/4,-2/3*L1r-L2r-5/3*L3r-L9r)
     #call renormNNLO(C70,-389/2304,-35/48,-8/3*L1r-17/3*L2r-5/2*L3r+1/3*L4r+1/4*L5r+5/8*L9r+7/4*L10r)
@@ -227,8 +229,9 @@
     #call renormNNLO(C93,0,1/8,L9r)
     #call renormNNLO(C94,-1517/7776,-119/162,-176/27*L1r-32/27*L2r-40/27*L3r-4*L4r-16/9*L6r-88/9*L7r)
 #elseif `NF' == 2
+    .sort:>>renormalize NF=2<<;
 *     TODO: figure out c37 which is missing from the table
-    symbols gamma1x37,gamma2x37,gammaLx37;
+    autodeclare symbol gamma;
 
     #call renormNNLO(c1,157/1728,7/9,19/12*l1r+43/24*l2r+1/2*l6r)
     #call renormNNLO(c2,-1/24,-11/48,-1/4*l1r-5/8*l2r-1/8*l6r)
