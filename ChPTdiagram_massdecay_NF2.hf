@@ -1,0 +1,47 @@
+* Bijnens & Hermansson-Truedsson '17
+
+#if `MFORDER' >= 4
+    #call require(QRENORM)
+    id aM10 = (2*l3q);
+    id aM11 = (1/2);
+    id aF10 = (l4q);
+    id aF11 = (-1);
+#endif
+
+#if `MFORDER' >= 6
+    id aM20 = (
+        64*c18q + 32*c17q + 96*c11q + 48*c10q - 16*c9q - 32*c8q - 16*c7q - 32*c6q + l3q + 2*l2q + l1q + 163/96);
+    id aM21 = (-3*l3q - 8*l2q - 14*l1q - 49/12);
+    id aM22 = (17/8);
+    id aF20 = (
+        8*c9q + 16*c8q + 8*c7q - 2*l3q - l2q - 1/2*l1q - 13/192);
+    id aF21 = (-1/2*l4q - 2*l3q + 4*l2q + 7*l1q + 23/12);
+    id aF22 = (-5/4);
+#endif
+
+#if `MFORDER' >= 8
+    .sort
+    symbols rM8q, rF8q, zeta3;
+    skip; nskip `EXPR';
+
+    id aM30 = (
+        rM8q - 3*l3q*c9q - 64*l3q*c8q - 32*l3q*c7q - 128*l3q*c6q + 32*c18q + 16*c17q - 4*c13q + 24*c12q + 48*c11q + 24*c10q - 8*c9q - 16*c8q - 8*c7q - 40*c6q + 12*c5q + 4*c4q - 8*c3q - 7*l3q^2 - 22*l1q*l3q - 4*l2q*l3q + 157/48*l3q + 8651/1200*l2q + 3823/1200*l1q + 4869659/777600 - 13/6*zeta3);
+    id aM31 = (
+        -416*c18q - 208*c17q - 32*c16q + 96*c14q + 8*c13q - 48*c12q - 384*c11q - 192*c10q + 72*c9q + 144*c8q + 72*c7q + 64*c6q - 8*c5q - 56*c4q + 16*c3q + 32*c2q - 96*c1q - 8*l3q^2 -48*l2q*l3q - 84*l2q*l3q - 84*l1q*l3q - 88/3*l3q - 231/10*l2q - 69/5*l1q - 74971/8640);
+    id aM32 = (32/2*l3q - 11*l2q - 38*l1q - 91/24);
+    id aM33 = (103/24);
+    id aF30 = (
+            rF8q - 8*l4q*c9q - 16*l4q*c8q - 8*l4q*c7q - 32*l4q*c6q - 64*c18q - 32*c17q + c13q - 6*c12q - 96*c11q - 48*c10q + 16*c9q + 32*c8q + 16*c7q + 40*c6q - 6*c5q - 2*c4q + 2*c3q - l3q*l4q - 2*l3q^2 + l2q*l4q + 4*l2q*l3q + 1/2*l1q*l4q + 12*l1q*l3q + 313/192*l4q + 241/48*l3q + 1469/800*l2q + 2359/600*l1q - 383293667/1555200 + 8/9*zeta3);
+    id aF31 = (
+            -16*c20q - 64*c18q - 32*c17q + 8*c16q - 24*c14q - 2*c13q +12*c12q - 96*c11q - 48*c10q + 80*c6q + 4*c5q + 28*c4q - 4*c3q - 8*c2q + 24*c1q - l3q*l4q - 4*l2q*l4q + 16*l2q*l3q - 7*l1q*l4q + 28*l1q*l3q - 13/6*l4q + 17/2*l3q + 569/60*l2q + 77/10*l1q - 7499/2160);
+    id aF32 = (3/8*l4q + 27/2*l2q + 33*l1q + 1037/144);
+    id aF33 = (-83/24);
+
+*                 TODO: determine rq from contact diagram
+    #message[massdecay]~~~ WARNING: N3LO LECs rM8q, rF8q not known
+#endif
+
+#if `MFORDER' >= 10
+    #message[massdecay]~~~ Not supported above N3LO
+    #terminate
+#endif

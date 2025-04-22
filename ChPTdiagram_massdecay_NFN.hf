@@ -1,0 +1,60 @@
+* Bijnens & Lu '09
+* Written differently from Bijnens & HT '17, with Abar = -m0p2*kappa*L
+*  and clumsier kappa management, so we convert them here.
+
+#if `MFORDER' >= 4
+    id aM10 =
+        + 1/kappa * (
+            8*`NF'*(2*L6r - L4r) + 8*(2*L8r - L5r))
+        ;* bM/kappa
+    id aM11 = 1/`NF'
+        ;* -aM
+    id aF10 =
+        + 1/kappa * (
+            4*`NF'*L4r + 4*L5r)
+        ;* bF/kappa
+    id aF11 = -`NF'/2
+        ;* -aF
+#endif
+
+#if `MFORDER' >= 6
+    id aM20 =
+        + 1/kappa^2 * (
+            -32*K17r - 16*K19r - 16*K23r + 48*K25r + 32*K39r
+            + `NF'*(-32*K18r - 16*K20r - 16*K21r + 48*K26r + 32*K40r)
+            + `NF'^2*(-16*K22r + 48*K27r)
+            + 64*(`NF'*L4r + L5r)*(`NF'*L4r + L5r - 2*`NF'*L6r - 2*L8r))
+        + 1/kappa * (
+            -4/`NF'*(L0r + L3r) + 4*L1r + 2*`NF'*(2*L0r + L3r) + 2*`NF'^2*L2r
+            -8*(L4r - 2*L6r + 1/`NF'*(L5r-2*L8r)))
+        + (-1/16 + 3/16*1/`NF'^2 - 3/16*1/`NF' + 193/384*`NF' + 169/384*`NF'^2)
+        ;* fM/kappa^2 + gM/kappa + hM
+    id aM21 =
+        - 1/kappa * (
+            8*L0r*(-3/`NF' + `NF') + 8*L1r*(-1 + 2*`NF'^2) + 4*L2r*(4 + `NF'^2) + L3r*(-24/`NF' + 20*`NF') + L4r*(40 - 16*`NF'^2) + L5r*(40/`NF' - 16*`NF') + L6r*(-16 + 16*`NF'^2) + L8r*(-80/`NF' + 32*`NF'))
+        - (-5/3 * 4/`NF'^2 + 19/16*`NF'^2)
+        ;* -dM/kappa - eM
+    id aM22 =
+        -1/2 + 9/2/`NF'^2 + 3/8*`NF'^2
+        ;* cM
+    id aF20 =
+        + 1/kappa^2 * (
+            -8*(`NF'*L4r + L5r)^2 + 8*(K19r + K23r) + 8*`NF'*(K20r + K21r) + 8*`NF'^2*K22r)
+        + 1/kappa * (
+            2/`NF'*(L0r + L3r) - 2*L1r + `NF'*(-2*L0r - L3r - 4*L5r - 8*L8r) + `NF'^2*(-L2r + 4*L4r - 8*L6r))
+        + (-7/24 + 7/8/`NF'^2 + `NF'^2/768)
+        ;* fF/kappa^2 + gF/kappa + hF
+    id aF21 =
+        - 1/kappa * (
+            4/`NF'*(3*L0r + 3*L3r - L5r) + 4*L1r - 8*L2r - 4*L4r + `NF'*(-4*L0r - 10*L3r - 2*L5r + 8*L8r))
+        - (2/3 - 1/2/`NF'^2 - 59/96*`NF'^2)
+        ;* -dF/kappa - eF
+    id aF22 =
+        -1/2 - 3/16*`NF'^2
+        ;* cF
+#endif
+
+#if `MFORDER' >= 8
+    #message[massdecay]~~~ N3LO only supported for NF=2
+    #terminate
+#endif

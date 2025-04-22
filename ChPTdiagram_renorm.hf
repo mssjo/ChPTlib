@@ -60,8 +60,21 @@
     .sort:>>renormalize `NORDER`ORD''<<;
 #endprocedure
 
+#procedure changemu(ORD,LOGRATIO)
+* Change renormalization scale
+* LOGRATIO is log( [new mu^2] / [old mu^2] )
+* Higher orders must be done AFTER lower
+
+* Implemented by piggy-backing on the renormalization,
+*  guaranteeing that all coefficients are the same
+
+    #define CHANGEMU "`LOGRATIO'"
+    #call renormalize(`ORD',0)
+
+#endprocedure
+
 #procedure qrenorm()
-*     Bijnens "q" convention for the renormalized LECs,
+*     Newer Bijnens "q" convention for the renormalized LECs,
 *     absorbing annoying kappa's from the "r" convention
     #ifdef `QRENORM'
         #do ORD=4,`ORDER',2
@@ -72,25 +85,18 @@
     #endif
 #endprocedure
 
-#procedure massdecay(EXPR,ORD)
-    #do N=2,8,2
-        #if `ORD' == `NORDER`N''
-            #redefine ORD "`N'"
-            #breakdo
-        #endif
-    #enddo
-
+#procedure massdecay(EXPR)
     .sort
     skip; nskip `EXPR';
 
     #ifdef `PKEMASS'
         id m0e2 = 4/3*m0k2 - 1/3*m0p2;
 
-        #if `ORD' == 2
+        #if `MFORDER' == 2
             id m0p2 = mp2;
             id m0k2 = mk2;
             id 1/F = 1/Fp;
-        #elseif `ORD' == 4
+        #elseif `MFORDER' == 4
             .sort
             symbols Mpp,Mpk,Mkp,Mkk;
             skip; nskip `EXPR';
@@ -132,21 +138,22 @@
             #message[massdecay]~~~ PKE mass not supported above NLO
             #terminate
         #endif
-    #elseif `ORD' == 2
-        id m0p2 = mp2;
-        id 1/F = 1/Fp;
+    #elseif `MFORDER' == 2
+        id m0p2^n? = mp2^n;
+        id F^n? = Fp^n;
     #else
         .sort
         cfunctions dM, dF;
         symbol xi;
         autodeclare symbol aM,bM, aF,bF;
+
         skip; nskip `EXPR';
 
-        #define XMAX "{`ORD'/2-1}"
+        #define XIMAX "{`MFORDER'/2-1}"
 
 *         Write "bare -> physical" as a series in x
-        id m0p2^n? = mp2^n * (1 + <xi^1*dM(1,n)>+...+<xi^`XMAX'*dM(`XMAX',n)>);
-        id F^n?    = Fp^n  * (1 + <xi^1*dF(1,n)>+...+<xi^`XMAX'*dF(`XMAX',n)>);
+        id m0p2^n? = mp2^n * (1 + <xi^1*dM(1,n)>+...+<xi^`XIMAX'*dM(`XIMAX',n)>);
+        id F^n?    = Fp^n  * (1 + <xi^1*dF(1,n)>+...+<xi^`XIMAX'*dF(`XIMAX',n)>);
 
 *         Write in terms of b coefficients
         #do Q={M,F}
@@ -154,7 +161,7 @@
             id d`Q'(2,n?) = n*d`Q'(2) + n*(n-1)/2 * d`Q'(1)^2;
             id d`Q'(3,n?) = n*d`Q'(3) + n*(n-1) * d`Q'(1)*d`Q'(2) + n*(n-1)*(n-2)/6 * d`Q'(1)^3;
 
-            #do I=1,`XMAX'
+            #do I=1,`XIMAX'
                 id d`Q'(`I') =
                     #do J=0,`I'
                         + Lp^`J' * b`Q'`I'`J'
@@ -164,7 +171,7 @@
         #enddo
 
 *         Truncate at appropriate order
-        if(count(xi,1)>`XMAX') discard;
+        if(count(xi,1)>`XIMAX') discard;
         id xi = kappa * mp2/Fp^2;
 
 *         Translate to the a coefficients of the original relation
@@ -175,118 +182,13 @@
 
 *         Get terms from prior work
         #if `NF' == 2
-*             Bijnens & Hermansson-Truedsson '17
-
-            #if `ORD' >= 4
-                #call require(QRENORM)
-                id aM10 = (2*l3q);
-                id aM11 = (1/2);
-                id aF10 = (l4q);
-                id aF11 = (-1);
-            #endif
-
-            #if `ORD' >= 6
-                id aM20 = (
-                    64*c18q + 32*c17q + 96*c11q + 48*c10q - 16*c9q - 32*c8q - 16*c7q - 32*c6q + l3q + 2*l2q + l1q + 163/96);
-                id aM21 = (-3*l3q - 8*l2q - 14*l1q - 49/12);
-                id aM22 = (17/8);
-                id aF20 = (
-                    8*c9q + 16*c8q + 8*c7q - 2*l3q - l2q - 1/2*l1q - 13/192);
-                id aF21 = (-1/2*l4q - 2*l3q + 4*l2q + 7*l1q + 23/12);
-                id aF22 = (-5/4);
-            #endif
-
-            #if `ORD' >= 8
-                .sort
-                symbols rM8q, rF8q, zeta3;
-                skip; nskip `EXPR';
-
-                id aM30 = (
-                    rM8q - 3*l3q*c9q - 64*l3q*c8q - 32*l3q*c7q - 128*l3q*c6q + 32*c18q + 16*c17q - 4*c13q + 24*c12q + 48*c11q + 24*c10q - 8*c9q - 16*c8q - 8*c7q - 40*c6q + 12*c5q + 4*c4q - 8*c3q - 7*l3q^2 - 22*l1q*l3q - 4*l2q*l3q + 157/48*l3q + 8651/1200*l2q + 3823/1200*l1q + 4869659/777600 - 13/6*zeta3);
-                id aM31 = (
-                    -416*c18q - 208*c17q - 32*c16q + 96*c14q + 8*c13q - 48*c12q - 384*c11q - 192*c10q + 72*c9q + 144*c8q + 72*c7q + 64*c6q - 8*c5q - 56*c4q + 16*c3q + 32*c2q - 96*c1q - 8*l3q^2 -48*l2q*l3q - 84*l2q*l3q - 84*l1q*l3q - 88/3*l3q - 231/10*l2q - 69/5*l1q - 74971/8640);
-                id aM32 = (32/2*l3q - 11*l2q - 38*l1q - 91/24);
-                id aM33 = (103/24);
-                id aF30 = (
-                        rF8q - 8*l4q*c9q - 16*l4q*c8q - 8*l4q*c7q - 32*l4q*c6q - 64*c18q - 32*c17q + c13q - 6*c12q - 96*c11q - 48*c10q + 16*c9q + 32*c8q + 16*c7q + 40*c6q - 6*c5q - 2*c4q + 2*c3q - l3q*l4q - 2*l3q^2 + l2q*l4q + 4*l2q*l3q + 1/2*l1q*l4q + 12*l1q*l3q + 313/192*l4q + 241/48*l3q + 1469/800*l2q + 2359/600*l1q - 383293667/1555200 + 8/9*zeta3);
-                id aF31 = (
-                        -16*c20q - 64*c18q - 32*c17q + 8*c16q - 24*c14q - 2*c13q +12*c12q - 96*c11q - 48*c10q + 80*c6q + 4*c5q + 28*c4q - 4*c3q - 8*c2q + 24*c1q - l3q*l4q - 4*l2q*l4q + 16*l2q*l3q - 7*l1q*l4q + 28*l1q*l3q - 13/6*l4q + 17/2*l3q + 569/60*l2q + 77/10*l1q - 7499/2160);
-                id aF32 = (3/8*l4q + 27/2*l2q + 33*l1q + 1037/144);
-                id aF33 = (-83/24);
-
-*                 TODO: determine rq from contact diagram
-                #message[massdecay]~~~ WARNING: N3LO LECs rM8q, rF8q not known
-            #endif
-
-            #if `ORD' >= 10
-                #message[massdecay]~~~ Not supported above N3LO
-                #terminate
-            #endif
+            #include- ChPTdiagram_massdecay_NF2.hf
         #else
-*             Bijnens & Lu '09
-*             Written differently from '17, with Abar = -m0p2*kappa*L0
-*              and clumsier kappa management, so we convert them here.
-
-            #if `ORD' >= 4
-                id aM10 =
-                    + 1/kappa * (
-                        8*`NF'*(2*L6r - L4r) + 8*(2*L8r - L5r))
-                    ;* bM/kappa
-                id aM11 = 1/`NF'
-                    ;* -aM
-                id aF10 =
-                    + 1/kappa * (
-                        4*`NF'*L4r + 4*L5r)
-                    ;* bF/kappa
-                id aF11 = -`NF'/2
-                    ;* -aF
-            #endif
-
-            #if `ORD' >= 6
-                id aM20 =
-                    + 1/kappa^2 * (
-                        -32*K17r - 16*K19r - 16*K23r + 48*K25r + 32*K39r
-                        + `NF'*(-32*K18r - 16*K20r - 16*K21r + 48*K26r + 32*K40r)
-                        + `NF'^2*(-16*K22r + 48*K27r)
-                        + 64*(`NF'*L4r + L5r)*(`NF'*L4r + L5r - 2*`NF'*L6r - 2*L8r))
-                    + 1/kappa * (
-                        -4/`NF'*(L0r + L3r) + 4*L1r + 2*`NF'*(2*L0r + L3r) + 2*`NF'^2*L2r
-                        -8*(L4r - 2*L6r + 1/`NF'*(L5r-2*L8r)))
-                    + (-1/16 + 3/16*1/`NF'^2 - 3/16*1/`NF' + 193/384*`NF' + 169/384*`NF'^2)
-                    ;* fM/kappa^2 + gM/kappa + hM
-                id aM21 =
-                    - 1/kappa * (
-                        8*L0r*(-3/`NF' + `NF') + 8*L1r*(-1 + 2*`NF'^2) + 4*L2r*(4 + `NF'^2) + L3r*(-24/`NF' + 20*`NF') + L4r*(40 - 16*`NF'^2) + L5r*(40/`NF' - 16*`NF') + L6r*(-16 + 16*`NF'^2) + L8r*(-80/`NF' + 32*`NF'))
-                    - (-5/3 * 4/`NF'^2 + 19/16*`NF'^2)
-                    ;* -dM/kappa - eM
-                id aM22 =
-                    -1/2 + 9/2/`NF'^2 + 3/8*`NF'^2
-                    ;* cM
-                id aF20 =
-                    + 1/kappa^2 * (
-                        -8*(`NF'*L4r + L5r)^2 + 8*(K19r + K23r) + 8*`NF'*(K20r + K21r) + 8*`NF'^2*K22r)
-                    + 1/kappa * (
-                        2/`NF'*(L0r + L3r) - 2*L1r + `NF'*(-2*L0r - L3r - 4*L5r - 8*L8r) + `NF'^2*(-L2r + 4*L4r - 8*L6r))
-                    + (-7/24 + 7/8/`NF'^2 + `NF'^2/768)
-                    ;* fF/kappa^2 + gF/kappa + hF
-                id aF21 =
-                    - 1/kappa * (
-                        4/`NF'*(3*L0r + 3*L3r - L5r) + 4*L1r - 8*L2r - 4*L4r + `NF'*(-4*L0r - 10*L3r - 2*L5r + 8*L8r))
-                    - (2/3 - 1/2/`NF'^2 - 59/96*`NF'^2)
-                    ;* -dF/kappa - eF
-                id aF22 =
-                    -1/2 - 3/16*`NF'^2
-                    ;* cF
-            #endif
-
-            #if `ORD' >= 8
-                #message[massdecay]~~~ N3LO only supported for NF=2
-                #terminate
-            #endif
+            #include- ChPTdiagram_massdecay_NFN.hf
         #endif
     #endif
     #call qrenorm
-    .sort:>>`NORDER`ORD'' M,F `EXPR'<<;
+    .sort:>>`NORDER`MFORDER'' M,F `EXPR'<<;
 #endprocedure
 
 #procedure expandD(MAXEPS)
@@ -294,15 +196,17 @@
     id pi^2 = 1/(16*kappa);
     id 1/pi^2 = 16*kappa;
 
-    id [d] = 4 - 2*eps;
+    id d^n? = [d]^n;
+
+    id [d]   = 4 - 2*eps;
     id [d-1] = 3 - 2*eps;
     id [d-2] = 2 - 2*eps;
     id [d-3] = 1 - 2*eps;
     id [d-4] =   - 2*eps;
     id 1/[d-4] = 1/(-2*eps);
-    id 1/[d-3] = sum_(n,0,`MAXEPS', (2*eps)^n);
+    id 1/[d-3] =       sum_(n,0,`MAXEPS', (2*eps)^n);
     id 1/[d-2] = 1/2 * sum_(n,0,`MAXEPS', eps^n );
     id 1/[d-1] = 1/3 * sum_(n,0,`MAXEPS', (2/3 * eps)^n );
-    id 1/[d] = 1/4 * sum_(n,0,`MAXEPS', (eps/2)^n);
+    id 1/[d]   = 1/4 * sum_(n,0,`MAXEPS', (eps/2)^n);
 
 #endprocedure
