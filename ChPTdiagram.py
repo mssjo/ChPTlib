@@ -1485,7 +1485,7 @@ class ChPTDiagramSet:
                 bracket `LECS', F, i_;
                 print +s;
                 .sort
-                #call store({self.name})
+                #call save({self.name})
                 .end'''), file=formfile)
 
             logger.info(f"Wrote output file {formfile.name}", extra=logextra)
