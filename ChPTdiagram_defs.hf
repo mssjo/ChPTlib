@@ -9,6 +9,43 @@
 *  and is much more maintainable.
 
 ********************************************************************************
+* Canonicalizing the power-counting orders, giving default values
+
+#ifndef `ORDER'
+* Unspecified order means arbitrarily high order
+* and like in the large Nc community, 10 > 3^2 so it's basically infinity
+    #define ORDER "10"
+#else
+*     Convert to numerical orders for easier comparison
+    #if `ORDER' == LO
+        #redefine ORDER "2"
+    #elseif `ORDER' == NLO
+        #redefine ORDER "4"
+    #elseif `ORDER' == N2LO || `ORDER' == NNLO
+        #redefine ORDER "6"
+    #elseif `ORDER' == N3LO || `ORDER' == NNNLO
+        #redefine ORDER "8"
+    #endif
+*     Define a uniform N-style order
+    #define NORDER "`NORDER`ORDER''"
+#endif
+#ifndef `MFORDER'
+* Unspecified M & F renormalization order means don't bother, i.e., LO
+    #define MFORDER "2"
+#else
+*     Convert to numerical orders for easier comparison
+    #if `MFORDER' == LO
+        #redefine MFORDER "2"
+    #elseif `MFORDER' == NLO
+        #redefine MFORDER "4"
+    #elseif `MFORDER' == N2LO || `MFORDER' == NNLO
+        #redefine MFORDER "6"
+    #elseif `MFORDER' == N3LO || `MFORDER' == NNNLO
+        #redefine MFORDER "8"
+    #endif
+#endif
+
+********************************************************************************
 * Setup, options and parameters
 
 * Number of external particles
@@ -183,18 +220,14 @@ set loops: `LOOPMOMENTA';
 #define DUMMYLECS "p4LEC,p6LEC,p8LEC"
 symbols `DUMMYLECS';
 * All LECs up to the relevant order
-#ifdef `ORDER'
-    #if `ORDER'>=4
-        #redefine LECS "`LECS',`NLOLECS'"
-    #endif
-    #if `ORDER'>=6
-        #redefine LECS "`LECS',`NNLOLECS'"
-    #endif
-    #if `ORDER'>=8
-        #redefine LECS "`LECS',`N3LOLECS'"
-    #endif
-#else
-    #redefine LECS "`LECS',`NLOLECS',`NNLOLECS',`N3LOLECS'"
+#if (`ORDER'>=4) || (`MFORDER'>=6)
+    #redefine LECS "`LECS',`NLOLECS'"
+#endif
+#if (`ORDER'>=6) || (`MFORDER'>=6)
+    #redefine LECS "`LECS',`NNLOLECS'"
+#endif
+#if (`ORDER'>=8) || (`MFORDER'>=8)
+    #redefine LECS "`LECS',`N3LOLECS'"
 #endif
 symbols `LECS',`NLOLECS',`NNLOLECS',`N3LOLECS';
 set LECs: `LECS';

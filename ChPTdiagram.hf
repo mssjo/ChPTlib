@@ -6,25 +6,6 @@
 #include- dirs.hf
 #include- ChPTdiagram_utils.hf
 
-#ifndef `ORDER'
-* Unspecified order means arbitrarily high order
-* and like in the large Nc community, 10 > 3^2 so it's basically infinity
-    #define ORDER "10"
-#else
-*     Convert to numerical orders for easier comparison
-    #if `ORDER' == LO
-        #redefine ORDER "2"
-    #elseif `ORDER' == NLO
-        #redefine ORDER "4"
-    #elseif `ORDER' == N2LO || `ORDER' == NNLO
-        #redefine ORDER "6"
-    #elseif `ORDER' == N3LO || `ORDER' == NNNLO
-        #redefine ORDER "8"
-    #endif
-*     Define a uniform N-style order
-    #define NORDER "`NORDER`ORDER''"
-#endif
-
 #include- ChPTdiagram_defs.hf
 
 #include- ChPTdiagram_vertex.hf
