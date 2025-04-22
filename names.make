@@ -25,7 +25,7 @@ endif
 ifdef NFGENERAL
     MAKEOPTS := $(MAKEOPTS) NFGENERAL=1
 else
-    NAMESUFFIX := $(NAMESUFFIX)NF$(NF)
+    NAMESUFFIX := $(NAMESUFFIX)_NF$(NF)
     FORMOPTS := $(FORMOPTS) -d NF=$(NF)
     MAKEOPTS := $(MAKEOPTS) NF=$(NF)
 endif
@@ -66,6 +66,7 @@ endif
 ifdef NAME
     SAVEDIR = $(LOCALDIR)/save
     SAVENAME = $(SAVEDIR)/$(NAME)$(NAMESUFFIX)
+    SAVEEXT = store.hf
 endif
 
 BBLOCKDIR = $(CHPTDIR)/bblocks

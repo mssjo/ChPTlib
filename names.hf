@@ -22,7 +22,7 @@
 #ifdef `NFGENERAL'
     #redefine MAKEOPTS "`MAKEOPTS' NFGENERAL=1"
 #else
-    #redefine NAMESUFFIX "`NAMESUFFIX'NF`NF'"
+    #redefine NAMESUFFIX "`NAMESUFFIX'_NF`NF'"
     #redefine FORMOPTS "`FORMOPTS' -d NF=`NF'"
     #redefine MAKEOPTS "`MAKEOPTS' NF=`NF'"
 #endif
@@ -63,6 +63,7 @@
 #ifdef `NAME'
     #define SAVEDIR "`LOCALDIR'/save"
     #define SAVENAME "`SAVEDIR'/`NAME'`NAMESUFFIX'"
+    #define SAVEEXT ".hf"
 #endif
 
 #define BBLOCKDIR "`CHPTDIR'/bblocks"
