@@ -28,6 +28,8 @@
     #endif
 *     Define a uniform N-style order
     #define NORDER "`NORDER`ORDER''"
+*     Number of loops allowed at this order
+    #define NLOOPS "{`NLOOP(`ORDER')'}"
 #endif
 #ifndef `MFORDER'
 * Unspecified M & F renormalization order means don't bother, i.e., LO
