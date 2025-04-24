@@ -1,15 +1,14 @@
+
+#ifndef `SCHEME'
+    #message[renorm]~~~ SCHEME not defined, defaulting to MSBAR (ChPT edition)
+    #define SCHEME "MSBAR"
+#endif
+
 #procedure renormalize(ORD,MAXEPS)
 
     .sort
     symbols [d],[d-1],[d-2],[d-3],[d-4];
-    symbols [(cmu)^(d-4)], Lambda, ctil;
-    #ifdef `PMCONV'
-        cfunction C;
-    #endif
-    #ifdef `HNCONV'
-        symbol [Gam(1+eps)];
-        cfunction C;
-    #endif
+    symbols [(cmu)^(d-4)], Lambda;
 
     #do N=2,8,2
         #if `ORD' == `NORDER`N''
@@ -42,16 +41,42 @@
         #endif
     #endif
 
-    #if isdefined(PMCONV)
-        id [(cmu)^(d-4)]^m? = C(eps,mu)^m * sum_(n,0,`MAXEPS', (m * eps)^n * invfac_(n));
-    #elseif isdefined(HNCONV)
-        id [(cmu)^(d-4)]^m? = C(eps,mp2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1 - gammaE))^n * invfac_(n)) / [Gam(1+eps)];
-    #elseif isdefined(PLAINCONV)
-        id [(cmu)^(d-4)] = 1;
-    #else
-        id [(cmu)^(d-4)]^m? = sum_(n,0,`MAXEPS', (m * eps * ctil)^n * invfac_(n));
-    #endif
+    .sort
 
+*     Renormalization scheme and associated conventions
+    #switch `SCHEME'
+*         ChPT variant of MSbar
+        #case MSBAR
+            symbol ctil;
+            id [(cmu)^(d-4)]^m? = sum_(n,0,`MAXEPS', (m * eps * ctil)^n * invfac_(n));
+            #break
+*         Sjo, Vanhove et al. '25
+        #case SV25
+        #case SV25M
+            symbol musq;* mu and mu2 are already taken as indices
+            cfunction C;
+            id [(cmu)^(d-4)]^m? =
+                #ifdef `MUisMP2'
+                    C(eps,m0p2)^m
+                #else
+                    C(eps,musq)^m
+                #endif
+                * sum_(n,0,`MAXEPS', (m * eps)^n * invfac_(n));
+            #break
+*         Bijnens & Hermansson-Truedsson '17
+        #case BHT17
+            symbol [Gam(1+eps)];
+            cfunction C;
+            id [(cmu)^(d-4)]^m? = C(eps,m0p2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1 - gammaE))^n * invfac_(n)) / [Gam(1+eps)];
+            #break
+*         For debugging other things
+        #case NULL
+            id [(cmu)^(d-4)] = 1;
+            #break
+        #default
+            #message[renorm]~~~ Unknown renormalization scheme `SCHEME'
+            #terminate
+    #endswitch
     id Lambda = kappa / [d-4];
 
     #call qrenorm
@@ -75,9 +100,16 @@
 
 #procedure qrenorm()
 *     Newer Bijnens "q" convention for the renormalized LECs,
-*     absorbing annoying kappa's from the "r" convention
+*     absorbing annoying kappas from the "r" convention
+
+    #if `ORDER'>`MFORDER'
+        #define MAX "`ORDER'"
+    #else
+        #define MAX "`MFORDER'"
+    #endif
+
     #ifdef `QRENORM'
-        #do ORD=4,`ORDER',2
+        #do ORD=4,`MAX',2
             #do L={``NORDER`ORD''LECSBARE'}
                 id `L'r = kappa^{(`ORD'-2)/2} * `L'q;
             #enddo

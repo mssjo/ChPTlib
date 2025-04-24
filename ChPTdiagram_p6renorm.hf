@@ -4,10 +4,22 @@
 * extracted directly from LaTeX source using a big ol' pile of regexes
 
 #procedure renormNNLO(LEC,GAMMA1,GAMMA2,GAMMAL)
-    id `LEC' = [(cmu)^(d-4)]^2/F^2 * (`LEC'r
-        - (`GAMMA2') * Lambda^2
-        - ((`GAMMA1')*kappa + (`GAMMAL')) * Lambda
-        );
+    #ifdef `CHANGEMU'
+        #ifdef `QRENORM'
+            id `LEC'q = `LEC'q
+                - (`GAMMA2')/2 * (`CHANGEMU')^2
+                - ((`GAMMA1') + (`GAMMAL')/kappa) * (`CHANGEMU');
+        #else
+            id `LEC'r = `LEC'r
+                - kappa^2*(`GAMMA2')/2 * (`CHANGEMU')^2
+                - kappa^2*((`GAMMA1') + (`GAMMAL')/kappa) * (`CHANGEMU');
+        #endif
+    #else
+        id `LEC' = [(cmu)^(d-4)]^2/F^2 * (`LEC'r
+            - (`GAMMA2') * Lambda^2
+            - ((`GAMMA1')*kappa + (`GAMMAL')) * Lambda
+            );
+    #endif
 #endprocedure
 
 
@@ -130,7 +142,6 @@
     #call renormNNLO(K115,0,1/72*`NF'^2,1/3*`NF'*L9r)
 #elseif `NF' == 3
     .sort:>>renormalize NF=3<<;
-    autodeclare symbol Gamma;
 
     #call renormNNLO(C1,71/768,17/32,7/3*L1r+35/6*L2r+9/4*L3r-L9r)
     #call renormNNLO(C2,1/128,15/64,3*L1r+L2r+5/6*L3r)
@@ -230,8 +241,6 @@
     #call renormNNLO(C94,-1517/7776,-119/162,-176/27*L1r-32/27*L2r-40/27*L3r-4*L4r-16/9*L6r-88/9*L7r)
 #elseif `NF' == 2
     .sort:>>renormalize NF=2<<;
-*     TODO: figure out c37 which is missing from the table
-    autodeclare symbol gamma;
 
     #call renormNNLO(c1,157/1728,7/9,19/12*l1r+43/24*l2r+1/2*l6r)
     #call renormNNLO(c2,-1/24,-11/48,-1/4*l1r-5/8*l2r-1/8*l6r)
@@ -269,7 +278,9 @@
     #call renormNNLO(c34,0,0,-l5r+1/2*l6r)
     #call renormNNLO(c35,-5/216,-20/9,-8/3*l1r-17/6*l2r-l4r-l6r)
     #call renormNNLO(c36,7/216,-5/24,-5/6*l1r+1/12*l2r+7/12*l6r)
-    #call renormNNLO(c37,gamma1x37,gamma2x37,gammaLx37)
+*     Derived from NFGENERAL that this omitted row is zero
+*     #call renormNNLO(c37,gamma1x37,gamma2x37,gammaLx37)
+    #call renormNNLO(c37,0,0,0)
     #call renormNNLO(c38,-5/216,-29/72,-7/6*l1r-5/12*l2r+5/12*l6r)
     #call renormNNLO(c39,-29/144,-139/144,-5/3*l1r-7/4*l2r+3/2*l5r-1/8*l6r)
     #call renormNNLO(c40,143/1728,1/4,1/3*l1r+7/12*l2r+1/2*l5r-1/4*l6r)

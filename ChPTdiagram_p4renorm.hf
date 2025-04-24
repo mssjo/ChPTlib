@@ -7,7 +7,15 @@
 
 
 #procedure renormNLO(LEC,GAMMA)
-    id `LEC' = [(cmu)^(d-4)] * (`LEC'r + (`GAMMA') * Lambda);
+    #ifdef `CHANGEMU'
+        #ifdef `QRENORM'
+            id `LEC'q = `LEC'q + (`GAMMA')/2 * `CHANGEMU';
+        #else
+            id `LEC'r = `LEC'r + kappa*(`GAMMA')/2 * `CHANGEMU';
+        #endif
+    #else
+        id `LEC' = [(cmu)^(d-4)] * (`LEC'r + (`GAMMA') * Lambda);
+    #endif
 #endprocedure
 
 #ifdef `NFGENERAL'
@@ -48,20 +56,11 @@
     #call renormNLO(l5,-1/6)
     #call renormNLO(l6,-1/3)
     #call renormNLO(l7,0)
-    #do I=1,8
-        #call renormNLO(l`I',gamma`I')
-    #enddo
-
-*     TODO: check these, since Gasser&Leutwyler use weird conventions
-* *     The -1/12 is deduced from what makes the NLO HVP work
-*     #call renormNLO(h1,-1/12)
-*     #call renormNLO(h2,0)
-*     #call renormNLO(h3,2)
 
 *     This follows Gasser&Leutwyler
     #call renormNLO(h1,2)
     #call renormNLO(h2,-1/12)
     #call renormNLO(h3,0)
 
-    id L?{h1r,h2r,h3r} = 0;
+*     id L?{h1r,h2r,h3r} = 0;
 #endif
