@@ -1612,7 +1612,7 @@ def main():
     try:
         diagrs = ChPTDiagramSet(args.file, options=args.define if args.define else [])
     except FileNotFoundError as err:
-        print(f"ERROR: xpt file not found: '{sys.argv[1]}'", file=sys.stderr)
+        print(f"ERROR: xpt file not found: '{args.file}'", file=sys.stderr)
         sys.exit(1)
     except ChPTError as err:
         print(f"ERROR: {err}", file=sys.stderr)
