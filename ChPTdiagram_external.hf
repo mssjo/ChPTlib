@@ -54,27 +54,6 @@
     repeat id replace(?a) * replace(?b) = replace(?a,?b);
     id replace(?a) = replace_(?a);
 
-    .sort:>>setPKE `EXPR'<<;
-    #if `Np' > 1
-        #define PFLAV "<f1>,...,<f`Np'>"
-    #else
-        #define PFLAV "f1,f2"
-    #endif
-    #if `Nk' > 1
-        #define STRANGE "<S1>,...,<S`Nk'>"
-        #define KFLAV "<F1>,...,<F`Nk'>"
-    #else
-        #define STRANGE "S1,S2"
-        #define KFLAV "F1,F2"
-    #endif
-
-    symbols `STRANGE';
-    set strange: `STRANGE';
-    indices `PFLAV', `KFLAV';
-    set pflav: `PFLAV';
-    set kflav: `KFLAV';
-    set pkflav: `PFLAV', `KFLAV';
-
     #call absorbt8(`EXPR')
     #call sqrt
 

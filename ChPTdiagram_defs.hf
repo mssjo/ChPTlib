@@ -70,6 +70,17 @@
     cfunctions propmatrix, Prop,Prop8,Prop88;
     symbols mhat,ms;
     symbols mp2,mk2,me2, m0p2,m0k2,m0e2;
+
+    #define PFLAV "<f1>,...,<f`NEXT'>"
+    #define KFLAV "<F1>,...,<F`NEXT'>"
+    #define STRANGE "<S1>,...,<S`NEXT'>"
+
+    symbols `STRANGE';
+    set strange: `STRANGE';
+    indices `PFLAV', `KFLAV';
+    set pflav: `PFLAV';
+    set kflav: `KFLAV';
+    set pkflav: `PFLAV', `KFLAV';
 #else
     #define EQUALMASS
     symbols mp2, m0p2;
