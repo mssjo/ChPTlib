@@ -1,10 +1,10 @@
+#-
 * Generates vertex factors efficiently by inserted precomputed expansions of Lagrangian building blocks
 * into the Lagrangian, using precomputed tables of integer partitions to get exactly the right orders
 * with no waste or length computations, just a bit of system overhead.
 
-Off statistics;
+off statistics;
 
-#-
 #ifndef `NP'
     #message "NP (power-counting order) undefined"
     #terminate 1
@@ -44,27 +44,6 @@ functions <bb1>,...,<bb`NP'>;
 local vertex`POWERINFO' =
     #include- ChPTdiagram_lagrangian.hf
     ;
-* This is now handled in p4lagrangian
-* #ifdef `NF'
-*     #if `NP'==4
-*         #if `NF'==3
-*             id L0 = 0;
-*         #elseif `NF'==2
-*             id L1 = l1/4;
-*             id L2 = l2/4;
-*             id L3 = 0;
-*             id L4 = 0;
-*             id L5 = 0;
-*             id L6 = l3/16;
-*             id L7 = l7/-16;
-*             id L8 = 0;
-*             id L9 = l6/-2;
-*             id L10 = l5;
-*             id H1 = h1;
-*             id H2 = h2;
-*         #endif
-*     #endif
-* #endif
 
 #ifdef `SELECTLEC'
     if(match(`SELECTLEC')==0) discard;

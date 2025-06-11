@@ -1,22 +1,14 @@
 * Header file for bblock-related things
 
-* Kalman's parametrization is Nf=2 only
-#ifdef `KALPAR'
-    #define NF "2"
-    cfunction kalmancoeff;
-#endif
-#ifdef `GENPAR'
-    cfunction a;
-#endif
-#ifndef `NF'
-    #define NFGENERAL
-#endif
-
 * Standard imports
 #define NEXT "{`NM'+`NV'}"
 #define NOMANDEL
 #include ChPTdiagram_utils.hf
 #include ChPTdiagram_defs.hf
+
+#if `PAR'==SQRT
+    cfunction sqrtcoeff;
+#endif
 
 * Name relevant things
 #include- names.hf
@@ -79,7 +71,7 @@
 #procedure trace()
     repeat;
         id trL(?x) * bb?{`XBBLOCKS'}(?lz) = trL(?x, bb(?lz));
-*         This accounts for nested traces due to GENPAR/KALPAR
+*         This accounts for nested traces due to PAR=GEN/SQRT
         id trL(?x) * tr(?y) = tr(?y) * trL(?x);
     endrepeat;
     id trL(?x) * trR = tr(?x);

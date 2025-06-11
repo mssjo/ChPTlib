@@ -25,9 +25,15 @@ endif
 ifdef NFGENERAL
     MAKEOPTS := $(MAKEOPTS) NFGENERAL=1
 else
-    NAMESUFFIX := $(NAMESUFFIX)_NF$(NF)
-    FORMOPTS := $(FORMOPTS) -d NF=$(NF)
-    MAKEOPTS := $(MAKEOPTS) NF=$(NF)
+    ifdef PKEMASS
+        NAMESUFFIX := $(NAMESUFFIX)_PKE
+        FORMOPTS := $(FORMOPTS) -d PKEMASS
+        MAKEOPTS := $(MAKEOPTS) PKEMASS=1
+    else
+        NAMESUFFIX := $(NAMESUFFIX)_NF$(NF)
+        FORMOPTS := $(FORMOPTS) -d NF=$(NF)
+        MAKEOPTS := $(MAKEOPTS) NF=$(NF)
+    endif
 endif
 ifdef CAYHAM
     NAMESUFFIX := $(NAMESUFFIX)_CAYHAM
@@ -47,11 +53,6 @@ ifdef TRF
     FORMOPTS := $(FORMOPTS) -d TRF
     MAKEOPTS := $(MAKEOPTS) TRF=1
 endif
-ifdef PKEMASS
-    NAMESUFFIX := $(NAMESUFFIX)_PKE
-    FORMOPTS := $(FORMOPTS) -d PKEMASS
-    MAKEOPTS := $(MAKEOPTS) PKEMASS=1
-endif
 ifdef TRANSFORM
     NAMESUFFIX := $(NAMESUFFIX)_$(TRANSFORM)TRANSF
     FORMOPTS := $(FORMOPTS) -d TRANSFORM=$(TRANSFORM)
@@ -66,7 +67,7 @@ endif
 ifdef NAME
     SAVEDIR = $(LOCALDIR)/save
     SAVENAME = $(SAVEDIR)/$(NAME)$(NAMESUFFIX)
-    SAVEEXT = store.hf
+    SAVEEXT = .hf
 endif
 
 BBLOCKDIR = $(CHPTDIR)/bblocks

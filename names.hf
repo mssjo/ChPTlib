@@ -19,12 +19,18 @@
     #endif
 #endif
 
-#ifdef `NFGENERAL'
-    #redefine MAKEOPTS "`MAKEOPTS' NFGENERAL=1"
+#ifdef `PKEMASS'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_PKE"
+    #redefine FORMOPTS "`FORMOPTS' -d PKEMASS"
+    #redefine MAKEOPTS "`MAKEOPTS' PKEMASS=1"
 #else
-    #redefine NAMESUFFIX "`NAMESUFFIX'_NF`NF'"
-    #redefine FORMOPTS "`FORMOPTS' -d NF=`NF'"
-    #redefine MAKEOPTS "`MAKEOPTS' NF=`NF'"
+    #ifdef `NFGENERAL'
+        #redefine MAKEOPTS "`MAKEOPTS' NFGENERAL=1"
+    #else
+        #redefine NAMESUFFIX "`NAMESUFFIX'_NF`NF'"
+        #redefine FORMOPTS "`FORMOPTS' -d NF=`NF'"
+        #redefine MAKEOPTS "`MAKEOPTS' NF=`NF'"
+    #endif
 #endif
 #ifdef `CAYHAM'
     #redefine NAMESUFFIX "`NAMESUFFIX'_CAYHAM"
@@ -43,11 +49,6 @@
     #redefine NAMESUFFIX "`NAMESUFFIX'_TRF"
     #redefine FORMOPTS "`FORMOPTS' -d TRF"
     #redefine MAKEOPTS "`MAKEOPTS' TRF=1"
-#endif
-#ifdef `PKEMASS'
-    #redefine NAMESUFFIX "`NAMESUFFIX'_PKE"
-    #redefine FORMOPTS "`FORMOPTS' -d PKEMASS"
-    #redefine MAKEOPTS "`MAKEOPTS' PKEMASS=1"
 #endif
 #ifdef `TRANSFORM'
     #redefine NAMESUFFIX "`NAMESUFFIX'_`TRANSFORM'TRANSF"
