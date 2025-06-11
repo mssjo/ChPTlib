@@ -62,7 +62,7 @@
 #ifdef `PKEMASS'
     #ifdef `NF'
         #if `NF'!=3
-            #message~~~[defs]~~~ ERROR: PKEMASS fixes NF=3; NF should not be defined separately
+            #message[defs]~~~ ERROR: PKEMASS fixes NF=3; NF should not be defined separately
             #terminate
         #endif
     #endif

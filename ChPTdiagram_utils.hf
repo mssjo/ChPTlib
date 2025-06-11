@@ -55,7 +55,7 @@
     #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ Saved on: `DATE_'"
     #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ FORMOPTS: `FORMOPTS'"
     #do EXPR={`ACTIVEEXPRNAMES_'}
-        #message[store]~~~ `EXPR' -> `SAVENAME'`SAVEEXT'
+        #message[save]~~~ `EXPR' -> `SAVENAME'`SAVEEXT'
         #write <`SAVENAME'`SAVEEXT'> "#call loadprefix(`EXPR',`SAVENAME'`SAVEEXT')"
         #write <`SAVENAME'`SAVEEXT'> "     (%E)",`EXPR'
     #enddo
