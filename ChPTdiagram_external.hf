@@ -11,13 +11,7 @@
 
 #procedure setPKE(EXPR)
     #ifndef `PKELIST'
-        #ifdef `FLAVS'
-            #define PKELIST "`PKE`FLAVS''"
-            #message[setPKE]~~~ PKELIST not defined, defaulting via FLAVS to PKE`FLAVS'
-        #else
-            #message[setPKE]~~~ ERROR: setPKE needs PKELIST (or FLAVS) defined
-            #terminate
-        #endif
+        #include- setPKElist.hf
     #endif
 
     .sort
@@ -62,21 +56,37 @@
 
     .sort:>>setPKE `EXPR'<<;
     #if `Np' > 1
-        set pflav: <f1>,...,<f`Np'>;
+        #define PFLAV "<f1>,...,<f`Np'>"
     #else
-        indices f1,f2;* Fallback for wildcarding
-        set pflav: f1,f2;
+        #define PFLAV "f1,f2"
     #endif
     #if `Nk' > 1
-        symbols <S1>,...,<S`Nk'>;
-        set kflav: <F1>,...,<F`Nk'>;
+        #define STRANGE "<S1>,...,<S`Nk'>"
+        #define KFLAV "<F1>,...,<F`Nk'>"
     #else
-        symbols S1,S2;
-        indices F1,F2;* Fallback for wildcarding
-        set kflav: F1,F2;
+        #define STRANGE "S1,S2"
+        #define KFLAV "F1,F2"
     #endif
+
+    symbols `STRANGE';
+    set strange: `STRANGE';
+    indices `PFLAV', `KFLAV';
+    set pflav: `PFLAV';
+    set kflav: `KFLAV';
+    set pkflav: `PFLAV', `KFLAV';
+
+    #call absorbt8(`EXPR')
+    #call sqrt
+
+    .sort:>>setPKE `EXPR'<<;
+
+#endprocedure
+
+#procedure absorbt8(EXPR)
+    .sort
     skip; nskip `EXPR';
-*
+
+    repeat id Tr(8,8,?a) = Tr(?a)/3 - Tr(8,?a)/sqrt6;
     #if `Np' > 0
         repeat;
             id Tr(8, f1?pflav, ?a) = Tr(f1, ?a) / sqrt6;
@@ -85,19 +95,12 @@
     #endif
     #if `Nk' > 0
         repeat;
-            id Tr(8, F1?kflav[n], ?a) = Tr(F1, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]+1)) / sqrt6;
-            id Tr(F1?kflav[n], 8, ?a) = Tr(F1, ?a) * (1 + 3/2*({<S1>,...,<S`Nk'>}[n]-1)) / sqrt6;
+            id Tr(8, F1?kflav[n], ?a) = Tr(F1, ?a) * (1 - 3/2*(1-strange[n])) / sqrt6;
+            id Tr(F1?kflav[n], 8, ?a) = Tr(F1, ?a) * (1 - 3/2*(1+strange[n])) / sqrt6;
         endrepeat;
     #endif
-    repeat id Tr(8,8,?a) = Tr(?a)/3 - Tr(8,?a)/sqrt6;
-
     id Tr(flav?) = 0;
     id Tr() = 3;
-
-    #call sqrt
-
-    .sort:>>setPKE `EXPR'<<;
-
 #endprocedure
 
 #procedure cayham(EXPR)
@@ -114,7 +117,7 @@
 
     repeat;
         `cayham`FLAVS''
-        label continue;* at most one substitution per repeat for predictability
+        label cayham;* at most one substitution per repeat for predictability
         id Tr(ac(f1?,f2?), ?a) = Tr(f1,f2, ?a) + Tr(f2,f1, ?a);* anticommutator
     endrepeat;
 
@@ -146,7 +149,7 @@
     repeat id kaonids(f1?pflav, ?a) = kaonids(?a);
     repeat id kaonids(F1?kflav, F2?kflav, ?a) = kaonids(?a);
 
-*     Enforce even number of kaons in trace
+*     Enforce even number of kaons in trace (S-conservation)
     id kaonids(F1?kflav) = 0;
     id kaonids() = 1;
 
@@ -171,7 +174,7 @@
         #call cayham(`EXPR')
     #endif
 
-    bracket `TRACES';
+    bracket Tr;
     .sort
     #ifndef `STRIPNODROP'
         drop `EXPR';
@@ -200,6 +203,10 @@
     .sort:>>strip `EXPR'<<;
 
 #endprocedure
+
+********************************************************************************
+*** OLD STUFF FROM HERE ON *****************************************************
+********************************************************************************
 
 #procedure setkaons(EXPR,NKPAIR)
 * Designate a number of pairs of external particles as kaons with opposite strangeness,
@@ -610,7 +617,8 @@
     .sort
 
     #define N "2"
-    symbols ii1,ii2;
+    symbols ii1,ii2, j1,j2;
+    function tau;
 
     skip; nskip `EXPR';
 
