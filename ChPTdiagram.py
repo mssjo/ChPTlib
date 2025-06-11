@@ -1618,6 +1618,9 @@ def main():
         print(f"ERROR: {err}", file=sys.stderr)
         sys.exit(1)
 
+    if args.actions is None:
+        print(f"ERROR: no action specified (any of -cCgbfF)", file=sys.stderr)
+        sys.exit(1)
     for action in args.actions:
         match action:
             case 'c':
