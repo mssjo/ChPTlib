@@ -7,7 +7,59 @@
 #include- ChPTdiagram_defs.hf
 #include- ChPTdiagram_flavs.hf
 
-*************************************************************************************************
+********************************************************************************
+
+#procedure strip(EXPR)
+    #ifndef `FLAVLIST'
+        #ifdef `FLAVS'
+            #define FLAVLIST "`FLAVS`FLAVS''"
+            #message[strip]~~~ FLAVLIST not defined, defaulting via FLAVS to FLAVS`FLAVS' (`FLAVLIST')
+        #else
+            #message[strip]~~~ ERROR: strip needs FLAVLIST defined
+            #terminate
+        #endif
+    #endif
+
+    #ifdef `PKEMASS'
+        #call kaonids(`EXPR')
+        #call cayham(`EXPR')
+    #elseif `NF'==2
+        #call cayham(`EXPR')
+    #endif
+
+    bracket Tr;
+    .sort
+    #ifndef `STRIPNODROP'
+        drop `EXPR';
+    #endif
+
+    #do FLAV={`FLAVLIST',END}
+        #if `FLAV'==END
+            #breakdo
+        #endif
+        local `EXPR'x`FLAV' = `EXPR'[`Tr`FLAV''];
+    #enddo
+    #do FLAV={`FLAVLIST',END}
+        #if `FLAV'==END
+            #breakdo
+        #endif
+
+        #if isdefined(Srel`FLAV')
+            .sort
+            skip;
+            nskip `EXPR'x`FLAV';
+
+            `Srel`FLAV''
+        #endif
+    #enddo
+
+    .sort:>>strip `EXPR'<<;
+
+#endprocedure
+
+********************************************************************************
+*** THINGS RELATED TO PKEMASS **************************************************
+********************************************************************************
 
 #procedure setPKE(EXPR)
     #ifndef `PKELIST'
@@ -61,6 +113,8 @@
 
 #endprocedure
 
+********************************************************************************
+
 #procedure absorbt8(EXPR)
     .sort
     skip; nskip `EXPR';
@@ -81,6 +135,8 @@
     id Tr(flav?) = 0;
     id Tr() = 3;
 #endprocedure
+
+********************************************************************************
 
 #procedure cayham(EXPR)
 * Cayley-Hamilton theorem
@@ -103,6 +159,8 @@
     .sort:>>cayham `EXPR'<<;
 
 #endprocedure
+
+********************************************************************************
 
 #procedure kaonids(EXPR)
 * Implement kaon flavor identities
@@ -135,52 +193,263 @@
     .sort:>>kaonids `EXPR'<<;
 #endprocedure
 
-#procedure strip(EXPR)
-    #ifndef `FLAVLIST'
-        #ifdef `FLAVS'
-            #define FLAVLIST "`FLAVS`FLAVS''"
-            #message[strip]~~~ FLAVLIST not defined, defaulting via FLAVS to FLAVS`FLAVS' (`FLAVLIST')
-        #else
-            #message[strip]~~~ ERROR: strip needs FLAVLIST defined
-            #terminate
-        #endif
-    #endif
 
+********************************************************************************
+*** FIXED EXTERNAL FLAVORS *****************************************************
+********************************************************************************
+
+#procedure setexternal(EXPR)
+    #ifndef `EXTERNAL'
+        #message[setexternal]~~~ EXTERNAL must be defined
+        #terminate
+    #endif
     #ifdef `PKEMASS'
-        #call kaonids(`EXPR')
-        #call cayham(`EXPR')
-    #elseif `NF'==2
-        #call cayham(`EXPR')
+        #ifndef `AFTERPKE'
+            #message[setexternal]~~~ If this is called after setPKE, AFTERPKE must be set
+        #endif
     #endif
 
-    bracket Tr;
     .sort
-    #ifndef `STRIPNODROP'
-        drop `EXPR';
+    skip; nskip `EXPR';
+
+    #define Np "0"
+    #define Nk "0"
+    #define Ne "0"
+    #define Nx "0"
+    #do X={`EXTERNAL'}
+        #redefine Nx "{`Nx'+1}"
+        #switch `X'
+            #case 1
+            #case p+
+            #case pp
+                #redefine Np "{`Np'+1}"
+                #call setext(`Nx',f`Np',1)
+                #break
+            #case 2
+            #case p-
+            #case pm
+                #redefine Np "{`Np'+1}"
+                #call setext(`Nx',f`Np',2)
+                #break
+            #case 3
+            #case p0
+            #case pn
+                #redefine Np "{`Np'+1}"
+                #call setext(`Nx',f`Np',3)
+                #break
+            #case 4
+            #case K+
+            #case kp
+                #redefine Nk "{`Nk'+1}"
+                #call setext(`Nx',F`Nk',4)
+                #break
+            #case 5
+            #case K-
+            #case km
+                #redefine Nk "{`Nk'+1}"
+                #call setext(`Nx',F`Nk',5)
+                #break
+            #case 6
+            #case K0
+            #case kn
+                #redefine Nk "{`Nk'+1}"
+                #call setext(`Nx',F`Nk',6)
+                #break
+            #case 7
+            #case K0b
+            #case kb
+                #redefine Nk "{`Nk'+1}"
+                #call setext(`Nx',F`Nk',7)
+                #break
+            #case 8
+            #case eta
+            #case e
+                #redefine Ne "{`Ne'+1}"
+                #call setext(`Nx',8,8)
+                #break
+            #default
+                #message[setexternal]~~~ Unrecognized external particle: `X'
+        #endswitch
+    #enddo
+
+    #call simplifytr(`EXPR')
+    #call explicittr(`EXPR')
+    #call explicittau(`EXPR')
+
+    .sort:>>setexternal<<;
+
+#endprocedure
+
+********************************************************************************
+
+#procedure setext(I,F,N)
+    #ifdef `AFTERPKE'
+        multiply replace_(`F',`N');
+    #else
+        multiply replace_(f`I',`N');
     #endif
 
-    #do FLAV={`FLAVLIST',END}
-        #if `FLAV'==END
-            #breakdo
-        #endif
-        local `EXPR'x`FLAV' = `EXPR'[`Tr`FLAV''];
+    id p`I'.p`I' =
+        #switch `N'
+            #case 1
+            #case 2
+            #case 3
+                mp2
+                #break
+            #case 4
+            #case 5
+            #case 6
+            #case 7
+                mk2
+                #break
+            #case 8
+                me2
+                #break
+        #endswitch
+        ;
+#endprocedure
+
+********************************************************************************
+
+#procedure simplifytr(EXPR)
+    .sort
+    skip; nskip `EXPR';
+
+    repeat id Tr(0, ?a) = Tr(?a) / sqrt3;
+
+*     The repeats are structured such that we use identities that give zero as much as possible,
+*     then those that give a single term,
+*     then those that give several terms.
+    repeat;
+        repeat;
+            repeat;
+                id Tr(1,i?{1,4,5,7}, ?a) = 0;
+                id Tr(2,i?{2,5,6,7}, ?a) = 0;
+                id Tr(4,i?{1,2,4,6}, ?a) = 0;
+                id Tr(5,i?{2,5,6,7}, ?a) = 0;
+                id Tr(6,i?{1,2,4,6}, ?a) = 0;
+                id Tr(7,i?{1,4,5,7}, ?a) = 0;
+
+                id Tr(3,i?{5,7}, ?a) = 0;
+                id Tr(i?{4,6},3, ?a) = 0;
+            endrepeat;
+
+            id Tr(1,6, ?a) = Tr(4, ?a);
+            id Tr(2,4, ?a) = Tr(6, ?a);
+            id Tr(4,7, ?a) = Tr(1, ?a);
+            id Tr(5,1, ?a) = Tr(7, ?a);
+            id Tr(6,5, ?a) = Tr(2, ?a);
+            id Tr(7,2, ?a) = Tr(5, ?a);
+
+            id Tr(3,8, ?a) = Tr(3, ?a)/sqrt6;
+            id Tr(8,3, ?a) = Tr(3, ?a)/sqrt6;
+
+            id Tr(3,i?{1,4}, ?a) = Tr(i, ?a)/sqrt2;
+            id Tr(i?{2,5},3, ?a) = Tr(i, ?a)/sqrt2;
+
+            id Tr(3,i?{2,6}, ?a) = -Tr(i, ?a)/sqrt2;
+            id Tr(i?{1,7},3, ?a) = -Tr(i, ?a)/sqrt2;
+
+            id Tr(8,i?{1,2,4,6}, ?a) = Tr(i, ?a)/sqrt6;
+            id Tr(i?{1,2,5,7},8, ?a) = Tr(i, ?a)/sqrt6;
+
+            id Tr(8,i?{5,7}, ?a) = -2*Tr(i, ?a)/sqrt6;
+            id Tr(i?{4,6},8, ?a) = -2*Tr(i, ?a)/sqrt6;
+        endrepeat;
+
+*         TRX = Tr(IX, ?a) where IX(i,j) = d_(i,X)*d_(j,X)
+        #define TR1 "(1/3*Tr(?a) + 1/sqrt2*Tr(3,?a) + 1/sqrt6*Tr(8,?a))"
+        #define TR2 "(1/3*Tr(?a) - 1/sqrt2*Tr(3,?a) + 1/sqrt6*Tr(8,?a))"
+        #define TR3 "(1/3*Tr(?a)                    - 2/sqrt6*Tr(8,?a))"
+
+        id Tr(1,2, ?a) = `TR1';
+        id Tr(2,1, ?a) = `TR2';
+        id Tr(4,5, ?a) = `TR1';
+        id Tr(5,4, ?a) = `TR3';
+        id Tr(6,7, ?a) = `TR2';
+        id Tr(7,6, ?a) = `TR3';
+
+        id Tr(3,3, ?a) = 1/3*Tr(?a) + 1/sqrt6*Tr(8,?a);
+        id Tr(8,8, ?a) = 1/3*Tr(?a) - 1/sqrt6*Tr(8,?a);
+
+    endrepeat;
+
+    id Tr(i?!{0,}) = 0;
+    id Tr() = 3;
+
+    #call sqrt
+
+    .sort:>>simplifytr<<;
+
+#endprocedure
+
+********************************************************************************
+
+#procedure explicittr(EXPR)
+
+    #call simplifytr(`EXPR')
+
+    .sort
+
+    #define N "2"
+    symbols ii1,ii2, j1,j2;
+    function tau;
+
+    skip; nskip `EXPR';
+
+    #do I=1,1
+        repeat;
+            id tr(<j1?>,...,<j`N'?>) =
+                #do J=1,`N'
+                    sum_(ii`J', 1,3,
+                #enddo
+                        <tau(j1,ii1,ii2)>*...*<tau(j{`N'-1},ii{`N'-1},ii{`N'})> * tau(j`N', ii`N',ii1)
+                #do J=1,`N'
+                    )
+                #enddo
+                ;
+        endrepeat;
+
+        if(match(tr(?a))) redefine I "0";
+        #redefine N "{`N'+1}"
+
+        .sort:>>explicittr: `N'<<;
+        symbol ii`N';
     #enddo
-    #do FLAV={`FLAVLIST',END}
-        #if `FLAV'==END
-            #breakdo
-        #endif
 
-        #if isdefined(Srel`FLAV')
-            .sort
-            skip;
-            nskip `EXPR'x`FLAV';
+#endprocedure
 
-            `Srel`FLAV''
-        #endif
-    #enddo
+********************************************************************************
 
-    .sort:>>strip `EXPR'<<;
+#procedure explicittau(EXPR)
+    .sort
+    skip; nskip `EXPR';
 
+
+    id tau(1, i?,j?) = d_(i,1)*d_(j,2);
+    id tau(2, i?,j?) = d_(i,2)*d_(j,1);
+
+    id tau(3, i?,j?) = 1/sqrt2 * (
+                                + d_(i,1)*d_(j,1)
+                                - d_(i,2)*d_(j,2)
+                            );
+
+    id tau(4, i?,j?) = d_(i,1)*d_(j,3);
+    id tau(5, i?,j?) = d_(i,3)*d_(j,1);
+
+    id tau(6, i?,j?) = d_(i,2)*d_(j,3);
+    id tau(7, i?,j?) = d_(i,3)*d_(j,2);
+
+
+    id tau(8, i?,j?) = 1/sqrt2/sqrt3 * (
+                                + d_(i,1)*d_(j,1)
+                                + d_(i,2)*d_(j,2)
+                              - 2*d_(i,3)*d_(j,3)
+                            );
+
+    #call sqrt
+
+    .sort:>>explicittau<<;
 #endprocedure
 
 ********************************************************************************
@@ -254,17 +523,6 @@
 
     .sort
 
-#endprocedure
-
-#procedure setext(I,A)
-    multiply replace_(f`I',`A');
-    #if (`A'==1)||(`A'==2)||(`A'==3)
-        id p`I'.p`I' = mp2;
-    #elseif (`A'==4)||(`A'==5)||(`A'==6)||(`A'==7)
-        id p`I'.p`I' = mk2;
-    #elseif (`A'==8)
-        id p`I'.p`I' = me2;
-    #endif
 #endprocedure
 
 #procedure fixext(WHICH)
@@ -374,27 +632,27 @@
     multiply replace_(me2,Me2);
 #endprocedure
 
-*************************************************************************************************
+********************************************************************************
 
-#procedure setexternal(EXPR,NP,NQ,NIN,NOUT)
+* #procedure setexternal(EXPR,NP,NQ,NIN,NOUT)
+*
+*
+*     #call conjugate(ext`EXPR',`NIN',`NOUT')
+*     #call massmixing(ext`EXPR')
+*
+*     #call assignexternal(`EXPR',{`NIN'+`NOUT'})
+*
+*     #call explicitdiag(`EXPR',{`NP'/2+2*`NQ'})
+*
+*     #call explicittr(`EXPR')
+*
+*     #call explicittau(`EXPR')
+*
+*     #call explicitprop(`EXPR')
+*
+* #endprocedure
 
-
-    #call conjugate(ext`EXPR',`NIN',`NOUT')
-    #call massmixing(ext`EXPR')
-
-    #call assignexternal(`EXPR',{`NIN'+`NOUT'})
-
-    #call explicitdiag(`EXPR',{`NP'/2+2*`NQ'})
-
-    #call explicittr(`EXPR')
-
-    #call explicittau(`EXPR')
-
-    #call explicitprop(`EXPR')
-
-#endprocedure
-
-*************************************************************************************************
+********************************************************************************
 
 #procedure conjugate(EXPR,NIN,NOUT)
     .sort
@@ -422,7 +680,7 @@
 #endprocedure
 
 
-*************************************************************************************************
+********************************************************************************
 
 #procedure massmixing(EXPR)
 
@@ -448,7 +706,7 @@
 
 #endprocedure
 
-*************************************************************************************************
+********************************************************************************
 
 #procedure assignexternal(EXPR,NM)
     .sort
@@ -483,7 +741,7 @@
 
 #endprocedure
 
-*************************************************************************************************
+********************************************************************************
 
 #procedure explicitdiag(EXPR,ND)
     .sort
@@ -513,150 +771,10 @@
 
 #endprocedure
 
-*************************************************************************************************
-
-#procedure simplifytr(EXPR)
-    .sort
-    skip; nskip `EXPR';
-
-    repeat id Tr(0, ?a) = Tr(?a) / sqrt3;
-
-*     The repeats are structured such that we use identities that give zero as much as possible,
-*     then those that give a single term,
-*     then those that give several terms.
-    repeat;
-        repeat;
-            repeat;
-                id Tr(1,i?{1,4,5,7}, ?a) = 0;
-                id Tr(2,i?{2,5,6,7}, ?a) = 0;
-                id Tr(4,i?{1,2,4,6}, ?a) = 0;
-                id Tr(5,i?{2,5,6,7}, ?a) = 0;
-                id Tr(6,i?{1,2,4,6}, ?a) = 0;
-                id Tr(7,i?{1,4,5,7}, ?a) = 0;
-
-                id Tr(3,i?{5,7}, ?a) = 0;
-                id Tr(i?{4,6},3, ?a) = 0;
-            endrepeat;
-
-            id Tr(1,6, ?a) = Tr(4, ?a);
-            id Tr(2,4, ?a) = Tr(6, ?a);
-            id Tr(4,7, ?a) = Tr(1, ?a);
-            id Tr(5,1, ?a) = Tr(7, ?a);
-            id Tr(6,5, ?a) = Tr(2, ?a);
-            id Tr(7,2, ?a) = Tr(5, ?a);
-
-            id Tr(3,8, ?a) = Tr(3, ?a)/sqrt6;
-            id Tr(8,3, ?a) = Tr(3, ?a)/sqrt6;
-
-            id Tr(3,i?{1,4}, ?a) = Tr(i, ?a)/sqrt2;
-            id Tr(i?{2,5},3, ?a) = Tr(i, ?a)/sqrt2;
-
-            id Tr(3,i?{2,6}, ?a) = -Tr(i, ?a)/sqrt2;
-            id Tr(i?{1,7},3, ?a) = -Tr(i, ?a)/sqrt2;
-
-            id Tr(8,i?{1,2,4,6}, ?a) = Tr(i, ?a)/sqrt6;
-            id Tr(i?{1,2,5,7},8, ?a) = Tr(i, ?a)/sqrt6;
-
-            id Tr(8,i?{5,7}, ?a) = -2*Tr(i, ?a)/sqrt6;
-            id Tr(i?{4,6},8, ?a) = -2*Tr(i, ?a)/sqrt6;
-        endrepeat;
-
-*         TRX = Tr(IX, ?a) where IX(i,j) = d_(i,X)*d_(j,X)
-        #define TR1 "(1/3*Tr(?a) + 1/sqrt2*Tr(3,?a) + 1/sqrt6*Tr(8,?a))"
-        #define TR2 "(1/3*Tr(?a) - 1/sqrt2*Tr(3,?a) + 1/sqrt6*Tr(8,?a))"
-        #define TR3 "(1/3*Tr(?a)                    - 2/sqrt6*Tr(8,?a))"
-
-        id Tr(1,2, ?a) = `TR1';
-        id Tr(2,1, ?a) = `TR2';
-        id Tr(4,5, ?a) = `TR1';
-        id Tr(5,4, ?a) = `TR3';
-        id Tr(6,7, ?a) = `TR2';
-        id Tr(7,6, ?a) = `TR3';
-
-        id Tr(3,3, ?a) = 1/3*Tr(?a) + 1/sqrt6*Tr(8,?a);
-        id Tr(8,8, ?a) = 1/3*Tr(?a) - 1/sqrt6*Tr(8,?a);
-
-    endrepeat;
-
-    id Tr(i?!{0,}) = 0;
-    id Tr() = 3;
-
-    #call sqrt
-
-    .sort:>>simplifytr<<;
-
-#endprocedure
-
-*************************************************************************************************
-
-#procedure explicittr(EXPR)
-
-    #call simplifytr(`EXPR')
-
-    .sort
-
-    #define N "2"
-    symbols ii1,ii2, j1,j2;
-    function tau;
-
-    skip; nskip `EXPR';
-
-    #do I=1,1
-        repeat;
-            id tr(<j1?>,...,<j`N'?>) =
-                #do J=1,`N'
-                    sum_(ii`J', 1,3,
-                #enddo
-                        <tau(j1,ii1,ii2)>*...*<tau(j{`N'-1},ii{`N'-1},ii{`N'})> * tau(j`N', ii`N',ii1)
-                #do J=1,`N'
-                    )
-                #enddo
-                ;
-        endrepeat;
-
-        if(match(tr(?a))) redefine I "0";
-        #redefine N "{`N'+1}"
-
-        .sort:>>explicittr: `N'<<;
-        symbol ii`N';
-    #enddo
-
-#endprocedure
-
-*************************************************************************************************
-
-#procedure explicittau(EXPR)
-    .sort
-    skip; nskip `EXPR';
+********************************************************************************
 
 
-    id tau(1, i?,j?) = d_(i,1)*d_(j,2);
-    id tau(2, i?,j?) = d_(i,2)*d_(j,1);
-
-    id tau(3, i?,j?) = 1/sqrt2 * (
-                                + d_(i,1)*d_(j,1)
-                                - d_(i,2)*d_(j,2)
-                            );
-
-    id tau(4, i?,j?) = d_(i,1)*d_(j,3);
-    id tau(5, i?,j?) = d_(i,3)*d_(j,1);
-
-    id tau(6, i?,j?) = d_(i,2)*d_(j,3);
-    id tau(7, i?,j?) = d_(i,3)*d_(j,2);
-
-
-    id tau(8, i?,j?) = 1/sqrt2/sqrt3 * (
-                                + d_(i,1)*d_(j,1)
-                                + d_(i,2)*d_(j,2)
-                              - 2*d_(i,3)*d_(j,3)
-                            );
-
-    #call sqrt
-
-    .sort:>>explicittau<<;
-#endprocedure
-
-*************************************************************************************************
+********************************************************************************
 
 #procedure explicitprop(EXPR)
     .sort
@@ -743,7 +861,7 @@
 
 #endprocedure
 
-*************************************************************************************************
+********************************************************************************
 
 #procedure sqrt()
 
@@ -761,7 +879,7 @@
 
 #endprocedure
 
-*************************************************************************************************
+********************************************************************************
 
 #procedure LOmasses(EXPR)
     .sort
