@@ -11,12 +11,28 @@
     #define FLAVS "`NEXT'"
     #message[flavs]~~~ FLAVS not defined, defaulting via NEXT to `NEXT' (pions only)
 #endif
-#define CAYHAMID "id,ifmatch->continue"
+#define CAYHAMID "id,ifmatch->cayham"
 #define TRACES "Tr"
 
 ********************************************************************************
 
 #switch `FLAVS'
+    #case K2
+        #define FLAVSK2 "K2"
+        #define PKEK2 "k,k"
+        #define cayhamK2 ""
+        #define SrelK2 "id S2=-S1;"
+
+        #break
+
+    #case 1K2
+        #define FLAVS1K2 "1K2"
+        #define PKEK2 "p,k,k"
+        #define cayham1K2 ""
+        #define Srel1K2 "id S2=-S1;"
+
+        #break
+
     #case 2K2
         #define FLAVS2K2 "2K2"
         #define PKE2K2 "p,p,k,k"
@@ -58,7 +74,7 @@
 
         #break
     #case 4K2
-        #define FLAVS4K2 "4K2,3K11K1,2K12K1,K2x4,3x1K2"
+        #define FLAVS4K2 "4K2,3x1K2"
         #define PKE4K2 "p,p,p,p,k,k"
         #define cayham4K2 "
             `CAYHAMID' Tr(F1?kflav,F2?kflav)*Tr(<f1?pflav>,...,<f4?pflav>) = Tr(F1,F2)*(
@@ -73,8 +89,8 @@
         #define Srel3x1K2 "id S2=-S1;"
 
         #break
-    #case 4K2
-        #define FLAVS2K4 "2K4,1K11K3,1K21K2,K2x2K2,K2x1K11K1,1K2x1K2"
+    #case 2K4
+        #define FLAVS2K4 "2K4,1K21K2,K2x2K2,1K2x1K2"
         #define PKE2K4 "p,p,k,k,k,k"
         #define cayham2K4 "
             id Tr(f1?pflav,f2?pflav)*Tr(<F1?kflav>,...,<F4?kflav>) = Tr(ac(f1,f2),F1,...,F4);"
@@ -95,9 +111,10 @@
     #case K6
         #define FLAVSK6 "K6,K2xK4,K2xK2xK2"
         #define PKEK6 "k,k,k,k,k,k"
+        #define cayhamK6 ""
 
         #define TrK6 "Tr(F1,F2,F3,F4,F5,F6)"
-        #define SrelK6 "id S2=-S1; id S3=+S1; id S4=-S1; id S5=+S1; ,S6=S1"
+        #define SrelK6 "id S2=-S1; id S3=+S1; id S4=-S1; id S5=+S1; id S6=-S1;"
 
         #define TrK2xK4 "Tr(F1,F2)*Tr(F3,F4,F5,F6)"
         #define SrelK2xK4 "id S2=-S1; id S4=-S3; id S5=+S3; id S6=-S3;"
@@ -112,9 +129,14 @@
 
             #include- names.hf
             #define FLAVDIR "`CHPTDIR'/flavs"
-            #define FLAVFILE "`FLAVDIR'/flav`FLAVS'.hf"
-            #system cd `FLAVDIR'/.. && pwd && echo "`MAKECMD' NM=`NEXT' `FLAVFILE'" && `MAKECMD' NM=`NEXT' `FLAVFILE'
 
+            #if (`NF'==2) || (isdefined(PKEMASS))
+                #define FLAVFILE "`FLAVDIR'/flav`FLAVS'.hf"
+            #else
+                #define FLAVFILE "`FLAVDIR'/flav`FLAVS'_SUN.hf"
+            #endif
+
+            #system cd `FLAVDIR'/.. && pwd && echo "`MAKECMD' NM=`NEXT' `FLAVFILE'" && `MAKECMD' NM=`NEXT' `FLAVFILE'
             #include- `FLAVFILE'
         #endif
     #endswitch

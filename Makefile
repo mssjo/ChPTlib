@@ -27,6 +27,9 @@ $(BBLOCKDIR)/rhs/%on$(NB).hf : partitions/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
 $(CHPTDIR)/flavs/flav$(NM).hf : make_flav.py
 	mkdir -p flavs
 	python make_flav.py $(NM)
+$(CHPTDIR)/flavs/flav$(NM)_SUN.hf : make_flav.py
+	mkdir -p flavs
+	python make_flav.py $(NM) SUN
 
 .PHONY: clean, vertex, bblock
 vertex : $(VERTEXFILE)

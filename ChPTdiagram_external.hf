@@ -140,12 +140,6 @@
 
 #procedure cayham(EXPR)
 * Cayley-Hamilton theorem
-
-    #if (isdefined(cayham`FLAVS')==0)
-        #message[cayham]~~~ cayham`FLAVS' not defined, skipping
-        #define cayham`FLAVS' ""
-    #endif
-
     .sort
     function ac;
     skip; nskip `EXPR';
