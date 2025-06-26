@@ -8,7 +8,7 @@
 
 #include- ChPTdiagram_defs.hf
 
-*************************************************************************************************
+********************************************************************************
 
 * Contract all internal flavor indices. Involves the following:
 *  - Fierz identity
@@ -26,6 +26,10 @@
         id SQED?{SQEDphi,SQEDdag}(?a, f1?, ?b, f1?, ?c) = 0;
         id SQED?{SQEDphi,SQEDdag}(?a) = 1;
     #endif
+    #ifndef `PKEMASS'
+*         flavor-independent propagator written in flavor-dependent notation
+        id propmatrix(q?, f1?,f2?) = prop(q,mp2) * d_(f1,f2);
+    #endif
 
     id d_(f1?extflav,f2?extflav) = Tr(f1,f2);
 
@@ -37,27 +41,48 @@
 *     #endif
 
     bracket Tr
-    #ifdef `PKEMASS'
-        , propmatrix
-    #endif
-    ;
+        #ifdef `PKEMASS'
+            , propmatrix
+        #endif
+        ;
     .sort
     skip; nskip `EXPR';
     keep brackets;
 
     repeat;
         #ifdef `PKEMASS'
-            id Tr(?X, f1?!{8,}) *  Tr(?Y, f2?!{8,}) * propmatrix(q?, f1?,f2?)
-                = (Tr(?X,?Y) - 1/3*Tr(?X)*Tr(?Y)) * Prop(q)
-                + (Tr(8, ?X,?Y) + Tr(8, ?Y,?X) - 2/3*Tr(?X,8)*Tr(?Y) - 2/3*Tr(?X)*Tr(8,?Y)) * Prop8(q)
-                + Tr(?X, 8) * Tr(8, ?Y) * Prop88(q);
-            id Tr(?X, f1?!{8,}, ?Y, f2?!{8,}) * propmatrix(q?, f1?,f2?)
-                = (Tr(?X)*Tr(?Y) - 1/3*Tr(?X,?Y)) * Prop(q)
-                + (Tr(?X,8)*Tr(?Y) + Tr(?X)*Tr(8,?Y) - 2/3*Tr(8, ?X,?Y) - 2/3*Tr(8, ?Y,?X)) * Prop8(q)
-                + Tr(8, ?X, 8, ?Y) * Prop88(q);
-
+            #ifdef `NAIVEPROP'
+                id Tr(?X, f1?!{1,...,8}) * Tr(?Y, f2?!{1,...,8}) * propmatrix(q?, f1?,f2?)
+                    = Tr(?X, 1) * Tr(?Y, 2) * prop(q, mp2)
+                    + Tr(?X, 2) * Tr(?Y, 1) * prop(q, mp2)
+                    + Tr(?X, 3) * Tr(?Y, 3) * prop(q, mp2)
+                    + Tr(?X, 4) * Tr(?Y, 5) * prop(q, mk2)
+                    + Tr(?X, 5) * Tr(?Y, 4) * prop(q, mk2)
+                    + Tr(?X, 6) * Tr(?Y, 7) * prop(q, mk2)
+                    + Tr(?X, 7) * Tr(?Y, 6) * prop(q, mk2)
+                    + Tr(?X, 8) * Tr(?Y, 8) * prop(q, me2);
+                id Tr(?X, f1?!{1,...,8}, ?Y, f2?!{1,...,8}) * propmatrix(q?, f1?,f2?)
+                    = Tr(?X, 1, ?Y, 2) * prop(q, mp2)
+                    + Tr(?X, 2, ?Y, 1) * prop(q, mp2)
+                    + Tr(?X, 3, ?Y, 3) * prop(q, mp2)
+                    + Tr(?X, 4, ?Y, 5) * prop(q, mk2)
+                    + Tr(?X, 5, ?Y, 4) * prop(q, mk2)
+                    + Tr(?X, 6, ?Y, 7) * prop(q, mk2)
+                    + Tr(?X, 7, ?Y, 6) * prop(q, mk2)
+                    + Tr(?X, 8, ?Y, 8) * prop(q, me2);
+            #else
+                id Tr(?X, f1?!{8,}) *  Tr(?Y, f2?!{8,}) * propmatrix(q?, f1?,f2?)
+                    = (Tr(?X,?Y) - 1/3*Tr(?X)*Tr(?Y)) * Prop(q)
+                    + (Tr(8, ?X,?Y) + Tr(8, ?Y,?X) - 2/3*Tr(?X,8)*Tr(?Y) - 2/3*Tr(?X)*Tr(8,?Y)) * Prop8(q)
+                    + Tr(?X, 8) * Tr(8, ?Y) * Prop88(q);
+                id Tr(?X, f1?!{8,}, ?Y, f2?!{8,}) * propmatrix(q?, f1?,f2?)
+                    = (Tr(?X)*Tr(?Y) - 1/3*Tr(?X,?Y)) * Prop(q)
+                    + (Tr(?X,8)*Tr(?Y) + Tr(?X)*Tr(8,?Y) - 2/3*Tr(8, ?X,?Y) - 2/3*Tr(8, ?Y,?X)) * Prop8(q)
+                    + Tr(8, ?X, 8, ?Y) * Prop88(q);
+            #endif
             id Tr(8) = 0;
         #else
+*             Single propagator mass, SU(N) Fierz identity
             id Tr(?X, f1?!{3,8}) * Tr(?Y, f1?!{3,8})
                 = Tr(?X,?Y) - 1/`NF' * Tr(?X)*Tr(?Y);
             id Tr(?X, f1?!{3,8}, ?Y, f1?!{3,8})

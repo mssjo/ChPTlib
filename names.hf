@@ -23,6 +23,11 @@
     #redefine NAMESUFFIX "`NAMESUFFIX'_PKE"
     #redefine FORMOPTS "`FORMOPTS' -d PKEMASS"
     #redefine MAKEOPTS "`MAKEOPTS' PKEMASS=1"
+    #ifdef `NAIVEPROP'
+        #redefine NAMESUFFIX "`NAMESUFFIX'NP"
+        #redefine FORMOPTS "`FORMOPTS' -d NAIVEPROP"
+        #redefine MAKEOPTS "`MAKEOPTS' NAIVEPROP=1"
+    #endif
 #else
     #ifdef `NFGENERAL'
         #redefine MAKEOPTS "`MAKEOPTS' NFGENERAL=1"
