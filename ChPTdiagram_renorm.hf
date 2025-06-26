@@ -4,11 +4,12 @@
     #define SCHEME "MSBAR"
 #endif
 
-#procedure renormalize(ORD,MAXEPS)
+#procedure renormalize(EXPR,ORD,MAXEPS)
 
     .sort
     symbols [d],[d-1],[d-2],[d-3],[d-4];
     symbols [(cmu)^(d-4)], Lambda;
+    skip; nskip `EXPR';
 
     #do N=2,8,2
         #if `ORD' == `NORDER`N''
@@ -41,20 +42,24 @@
         #endif
     #endif
 
-    .sort
-
 *     Renormalization scheme and associated conventions
     #switch `SCHEME'
 *         ChPT variant of MSbar
         #case MSBAR
-            symbol ctil;
+            .sort
+            symbols ctil, etil;
+            skip; nskip `EXPR';
+
             id [(cmu)^(d-4)]^m? = sum_(n,0,`MAXEPS', (m * eps * ctil)^n * invfac_(n));
             #break
 *         Sjo, Vanhove et al. '25
         #case SV25
         #case SV25M
+            .sort
             symbol musq;* mu and mu2 are already taken as indices
             cfunction C;
+            skip; nskip `EXPR';
+
             id [(cmu)^(d-4)]^m? =
                 #ifdef `MUisMP2'
                     C(eps,m0p2)^m
@@ -65,8 +70,11 @@
             #break
 *         Bijnens & Hermansson-Truedsson '17
         #case BHT17
+            .sort
             symbol [Gam(1+eps)];
             cfunction C;
+            skip; nskip `EXPR';
+
             id [(cmu)^(d-4)]^m? = C(eps,m0p2)^m * sum_(n,0,`MAXEPS', (m * eps * (L + 1 - gammaE))^n * invfac_(n)) / [Gam(1+eps)];
             #break
 *         For debugging other things
@@ -81,6 +89,12 @@
 
     #call qrenorm
     #call expandD(`MAXEPS')
+
+    #if `SCHEME' == MSBAR
+*         Careful with the signs here
+        id 1/eps = 1/etil - ctil;
+        id eps/etil = 1 + eps*ctil;
+    #endif
 
     .sort:>>renormalize `NORDER`ORD''<<;
 #endprocedure
@@ -130,14 +144,17 @@
             id 1/F = 1/Fp;
         #elseif `MFORDER' == 4
             .sort
-            symbols Mpp,Mpk,Mkp,Mkk;
+            symbols Mpp,Mpk,Mkp,Mkk, xi;
             skip; nskip `EXPR';
 
 *             Mab is the coefficient of m0a2*m0b2 in the expression for ma2.
 *             The below formula follows from inverting that relation.
 
-            id m0p2^n? = mp2^n * (1 - n/Fp^2 * (Mpp*mp2 + Mpk*mk2));
-            id m0k2^n? = mk2^n * (1 - n/Fp^2 * (Mkp*mp2 + Mkk*mk2));
+*             xi is a power-counting parameter like in the equal-mass case below,
+*             except that the kappa*mass is excluded from it
+
+            id m0p2^n? = mp2^n * (1 - n*xi * (Mpp*mp2 + Mpk*mk2));
+            id m0k2^n? = mk2^n * (1 - n*xi * (Mkp*mp2 + Mkk*mk2));
 
 *             From Gasser & Leutwyler '85 via Gomez-Nicola & Pelaez '01
             id Mpp =
@@ -159,12 +176,20 @@
 
 *             Similar story with the decay constant, but simpler since we only use Fp.
 
-            id 1/F^n? = 1/Fp^n * (1 + n/Fp^2 * (
+            id 1/F^n? = 1/Fp^n * (1 + n*xi * (
                 - Lp*mp2*kappa
                 - 1/2 * Lk*mk2*kappa
                 + 4*mp2 * (L4r + L5r)
                 + 8*mk2 * L4r
                 ));
+
+            .sort
+            skip; nskip `EXPR';
+
+*             Truncate the power-counting
+*             (effectively make it NLO in mass XOR decay constant, not OR)
+            if(count(xi,1) > 1) discard;
+            id xi = 1/Fp^2;
 
         #else
             #message[massdecay]~~~ PKE mass not supported above NLO
@@ -221,6 +246,68 @@
     #endif
     #call qrenorm
     .sort:>>`NORDER`MFORDER'' M,F `EXPR'<<;
+#endprocedure
+
+#procedure Zrenorm(EXPR):
+*     Ensure information exists about the type of external particle
+    #ifndef `PKELIST'
+        #ifdef `FLAVS'
+            #define PKELIST "`PKE`FLAVS''"
+            #message[Zrenorm]~~~ PKELIST not defined, defaulting via FLAVS to PKE`FLAVS'
+        #else
+            #message[Zrenorm]~~~ ERROR: Zrenorm needs PKELIST (or FLAVS) defined
+            #terminate
+        #endif
+    #endif
+
+    .sort
+    symbol lambda;
+    #do ORD=4,`ZORDER'
+        symbols Zp`NORDER`ORD''
+            #ifdef `PKEMASS'
+                , Zk`NORDER`ORD'', Ze`NORDER`ORD''
+            #endif
+            ;
+    #enddo
+    skip; nskip `EXPR';
+
+    multiply (0
+        #do X={`PKELIST'}
+            #if `ZORDER' > 2
+                + Z`X'NLO/(2*F^2)
+                #if `ZORDER' > 4
+*                     - Z`X'NNLO/(8*F^4)
+                    #message[Zrenorm]~~~ Zrenorm not implemented beyond NLO
+                #endif
+            #endif
+        #enddo
+        );
+
+    #ifdef `PKEMASS'
+*         From Gomez Nicola & Pelaez '01
+*         with lambda = -kappa/2/etil in Bijnens' convention
+*         GN&P are also a little inconsistent regatding m0 vs m, but that doesn't
+*         matter until NNLO
+        id ZpNLO
+            = 2*m0p2*Lp*kappa/3
+            + 1*m0k2*Lk*kappa/3
+            - 4*lambda/3 * (2*m0p2 + m0k2)
+            - 8*(2*L4r*m0k2 + (L4r+L5r)*m0p2);
+        id ZkNLO
+            = m0p2*Lp*kappa/4
+            + m0k2*Lk*kappa/2
+            + m0e2*Le*kappa/4
+            - 2*lambda/3 * (m0p2 + 5*m0k2)
+            - 8*((2*L4r+L5r)*m0k2 + L4r*m0p2);
+        id ZeNLO
+            = m0k2*Lk*kappa
+            - 4*lambda*m0k2
+            - 8/3*((3*L4r-L5r)*m0p2 + 2*(3*L4r+2*L5r)*m0k2);
+    #else
+*         Bijnens' modus operandi is computing these on the fly
+    #endif
+
+
 #endprocedure
 
 #procedure expandD(MAXEPS)
