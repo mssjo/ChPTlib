@@ -202,7 +202,7 @@
 
 #procedure mandel(EXPR)
     .sort;
-    symbols s,t,u, tpu,tmu, spu,smu;
+    symbols s,t,u, tpu,tmu, spu,smu, spt,smt;
     skip; nskip `EXPR';
 
     #if(`NEXT'==4)
@@ -217,18 +217,55 @@
         .sort
         skip; nskip `EXPR';
 
-        id u = <p1.p1>+...+<p4.p4> - s - t;
+        #ifndef `MANDEL'
+            #define MANDEL "st"
+        #endif
+        #switch `TOLOWER_(`MANDEL')'
+            #case st
+            #case ts
+                id u = <p1.p1>+...+<p4.p4> - s - t;
+                #break
+            #case su
+            #case us
+                id t = <p1.p1>+...+<p4.p4> - s - u;
+                #break
+            #case tu
+            #case ut
+                id s = <p1.p1>+...+<p4.p4> - t - u;
+                #break
 
-*         id s = (spu + smu)/2;
-*         id u = (spu - smu)/2;
-*         id spu = 4*Mpi^2 - t;
+            #case s
+            #case tmu
+                id t = (tpu + tmu)/2;
+                id u = (tpu - tmu)/2;
+                id tpu = <p1.p1>+...+<p4.p4> - s;
+                #break
+            #case t
+            #case smu
+                id s = (spu + smu)/2;
+                id u = (spu - smu)/2;
+                id spu = <p1.p1>+...+<p4.p4> - t;
+                #break
+            #case u
+            #case smt
+                id s = (spt + smt)/2;
+                id t = (spt - smt)/2;
+                id spt = <p1.p1>+...+<p4.p4> - u;
+                #break
 
-*         id p?extmomenta[n].p? = Mpi^2;
+            #default
+                #message[mandel]~~~ Unknown option: MANDEL=`MANDEL'
+                #terminate
+        #endswitch
 
         .sort:>>4pt Mandelstams<<;
     #else
         exit "ERROR: `NEXT'pt Mandelstams not implemented";
         .end
+    #endif
+
+    #ifdef `EQUALMASS'
+        id p1?extmomenta.p1? = mp2;
     #endif
 
 #endprocedure
