@@ -8,6 +8,12 @@
         #terminate 1
     #endif
 #endprocedure
+#procedure requirenot(PARAM)
+    #ifdef ``PARAM''
+        #message[require]~~~ ERROR: parameter `PARAM' must be defined
+        #terminate 1
+    #endif
+#endprocedure
 #procedure requireval(PARAM,VAL)
     #call require(`PARAM')
     #if ``PARAM'' != `VAL'
