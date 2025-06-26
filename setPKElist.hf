@@ -1,3 +1,6 @@
+#ifndef `PKEMASS'
+    #message[setPKE]~~~ Only applicable with PKEMASS set
+#endif
 #ifdef `FLAVS'
     #define PKELIST "`PKE`FLAVS''"
     #message[setPKE]~~~ PKELIST not defined, defaulting via FLAVS to PKE`FLAVS'
