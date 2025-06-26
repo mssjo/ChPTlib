@@ -118,7 +118,7 @@
         #call substitute(Phi,0)
 
     #else
-*         All other parametrizations are variants on the exponential
+*         All other parametrizations are given in terms of Taylor series
         (`PM'i_*Phi/(sqrt2*F))^`NM'
         #if `NM'>=2
             #switch `PAR'

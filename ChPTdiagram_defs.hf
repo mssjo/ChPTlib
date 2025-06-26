@@ -67,7 +67,7 @@
         #endif
     #endif
     #define NF "3"
-    cfunctions propmatrix, Prop,Prop8,Prop88;
+    cfunctions Prop,Prop8,Prop88;
     symbols mhat,ms;
     symbols mp2,mk2,me2, m0p2,m0k2,m0e2;
 
@@ -324,7 +324,7 @@ cfunctions Tr(cyclic), phi, A;
 symbols n, <n1>,...,<n`NEXT'>, m, <m1>,...,<m`NEXT'>;
 symbols sqrt2,sqrt3,sqrt6;
 
-cfunctions prop, coeff;
+cfunctions prop, propmatrix, coeff;
 functions sum, derivs, dummy;
 
 symbols d, [d], <[d-1]>,...,<[d-4]>;
