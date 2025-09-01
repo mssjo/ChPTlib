@@ -3,8 +3,8 @@
 * Standard imports
 #define NEXT "{`NM'+`NV'}"
 #define NOMANDEL
-#include ChPTdiagram_utils.hf
-#include ChPTdiagram_defs.hf
+#include ChPT_utils.hf
+#include ChPT_defs.hf
 
 #if `PAR'==SQRT
     cfunction sqrtcoeff;

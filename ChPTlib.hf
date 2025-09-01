@@ -1,0 +1,17 @@
+#ifndef `CHPTDIAGRAMHF'
+#define CHPTDIAGRAMHF
+
+* The ChPT diagram calculation library
+
+#include- dirs.hf
+#include- ChPT_utils.hf
+
+#include- ChPT_defs.hf
+
+#include- ChPT_vertex.hf
+#include- ChPT_diagram.hf
+#include- ChPT_renorm.hf
+#include- ChPT_amplitude.hf
+#include- ChPT_external.hf
+
+#endif

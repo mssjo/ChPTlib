@@ -9,7 +9,7 @@ runform () {
     else
         echo "O(p^$1) $2-meson $3-photon vertex with options $4"
     fi
-    form -l -d NP=$1 -d NM=$2 -d NV=$3 $4 ChPTdiagram_lagrangian.frm > /dev/null
+    form -l -d NP=$1 -d NM=$2 -d NV=$3 $4 ChPT_lagrangian.frm > /dev/null
 }
 
 rm vertices/*

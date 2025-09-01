@@ -4,8 +4,8 @@
 * Procedures related to specifying external states
 * Something of a work in progress -- expect heavy revisions
 
-#include- ChPTdiagram_defs.hf
-#include- ChPTdiagram_flavs.hf
+#include- ChPT_defs.hf
+#include- ChPT_flavs.hf
 
 ********************************************************************************
 

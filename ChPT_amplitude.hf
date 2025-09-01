@@ -3,7 +3,7 @@
 
 * Procedures relating to building amplitudes from diagrams
 
-#include- ChPTdiagram_defs.hf
+#include- ChPT_defs.hf
 
 
 *************************************************************************************************

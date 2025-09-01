@@ -17,7 +17,7 @@ off statistics;
     #define NV "0"
 #endif
 
-#include- ChPTdiagram_bblocks.hf
+#include- ChPT_bblocks.hf
 
 functions <bb1>,...,<bb`NP'>;
 
@@ -42,7 +42,7 @@ functions <bb1>,...,<bb`NP'>;
 
 * Load the Lagrangian
 local vertex`POWERINFO' =
-    #include- ChPTdiagram_lagrangian.hf
+    #include- ChPT_lagrangian.hf
     ;
 
 #ifdef `SELECTLEC'

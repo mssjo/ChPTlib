@@ -8,17 +8,17 @@ ifdef NP
 endif
 
 
-$(VERTEXFILE): ChPTdiagram_lagrexpand.frm ChPTdiagram_p$(NP)lagrangian.hf ChPTdiagram_bblocks.hf ChPTdiagram_bbexpand.frm
+$(VERTEXFILE): ChPT_lagrexpand.frm ChPT_p$(NP)lagrangian.hf ChPT_bblocks.hf ChPT_bbexpand.frm
 	$(info Generating $(VERTEXFILE))
-	$(FORM) $(FORMOPTS) ChPTdiagram_lagrexpand.frm
+	$(FORM) $(FORMOPTS) ChPT_lagrexpand.frm
 # ifdef GENPAR
 # 	sed -i -E ':x; s/a\(([0-9]+),?([0-9,]*)\)/a(\2)\1/g; tx; s/a\(\)/a/' $(VERTEXFILE)
 # endif
 
-$(BBLOCKFILE) : ChPTdiagram_bblocks.hf ChPTdiagram_bbexpand.frm
+$(BBLOCKFILE) : ChPT_bblocks.hf ChPT_bbexpand.frm
 	mkdir -p $(BBLOCKDIR)/$(BBLOCKNAME)
 	$(info Generating $(BBLOCKFILE))
-	$(FORM) $(VERTEXOPTS) -d BBLOCK=$(BBLOCK) -d RANK=$(RANK) ChPTdiagram_bbexpand.frm
+	$(FORM) $(VERTEXOPTS) -d BBLOCK=$(BBLOCK) -d RANK=$(RANK) ChPT_bbexpand.frm
 
 $(BBLOCKDIR)/rhs/%on$(NB).hf : partitions/%uf$(NB).hf $(BBLOCKDIR)/rhs.sh
 	mkdir -p $(BBLOCKDIR)/rhs

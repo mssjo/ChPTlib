@@ -6,7 +6,7 @@
 *  by the more direct, efficient and less buggy diagram-building provided by
 *  generated diagram files as opposed to handwritten ones
 
-#include- ChPTdiagram_defs.hf
+#include- ChPT_defs.hf
 
 ********************************************************************************
 

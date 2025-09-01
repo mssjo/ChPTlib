@@ -27,13 +27,13 @@
                 #case 2
                     #break
                 #case 4
-                    #include- ChPTdiagram_p4renorm.hf
+                    #include- ChPT_p4renorm.hf
                     #break
                 #case 6
-                    #include- ChPTdiagram_p6renorm.hf
+                    #include- ChPT_p6renorm.hf
                     #break
                 #case 8
-                    #include- ChPTdiagram_p8renorm.hf
+                    #include- ChPT_p8renorm.hf
                     #break
                 #default
                     #message[renorm]~~~ ERROR: order p^`ORD' not implemented
@@ -239,9 +239,9 @@
 
 *         Get terms from prior work
         #if `NF' == 2
-            #include- ChPTdiagram_massdecay_NF2.hf
+            #include- ChPT_massdecay_NF2.hf
         #else
-            #include- ChPTdiagram_massdecay_NFN.hf
+            #include- ChPT_massdecay_NFN.hf
         #endif
     #endif
     #call qrenorm

@@ -16,4 +16,4 @@
     #endif
 #endprocedure
 
-#include ChPTdiagram_p`NP'lagrangian.hf
+#include ChPT_p`NP'lagrangian.hf

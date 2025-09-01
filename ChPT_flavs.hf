@@ -2,7 +2,7 @@
 #define CHPTDIAGRAMFLAVSHF
 
 * Flavor structures and their associated information
-* For use in ChPTdiagram_external.hf
+* For use in ChPT_external.hf
 * Dynamically generates for any pions,
 * handwritten cases cover mixed pion/kaon structures up to 6-point
 

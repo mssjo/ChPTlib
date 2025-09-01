@@ -1,7 +1,7 @@
 #-
 * Expands Lagrangian building blocks to the desired order in the fields.
-* Intended as an auxiliary to ChPTdiagram_lagrexpand.frm
-#include- ChPTdiagram_bblocks.hf
+* Intended as an auxiliary to ChPT_lagrexpand.frm
+#include- ChPT_bblocks.hf
 
 #setexternalattr stderr=terminal
 
