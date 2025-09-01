@@ -6,5 +6,5 @@ bblocks/*
 vertices/*
 partitions/*
 flavs/*
-test_*
+test*
 dirs.*

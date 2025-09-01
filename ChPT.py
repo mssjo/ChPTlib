@@ -1432,7 +1432,7 @@ class DiagramSet:
                 #include- {dirname}/definitions.hf
                 #include- {dirname}/kinematics.hf
 
-                * This flagg enables replacements also inside function arguments
+                * This flag enables replacements also inside function arguments
                 * Remove if e.g. propagators are to be handled separately
                 #define REPLARG
 
@@ -1454,7 +1454,7 @@ class DiagramSet:
                     #include- {dirname}/flags/on_`DIAGRAM'.hf
 
                 *    NOTE: any custom manipulations inserted between either of these steps should
-                *    be guarded with #call nskip(`DIAGRAM')
+                *    be guarded with #call nskip(`DIAGRAM') at the start of each module
 
                 *    This sets up the Feynman rules of the diagram and contracts the flavor indices
                     #include- {dirname}/diagrams/`DIAGRAM'.hf
@@ -1569,23 +1569,19 @@ def main():
                         help="Print information about the .chpt file format and exit")
     parser.add_argument('-c', '--check-CoM', action='append_const', const='c', dest='actions',
                         help="Check that conservation of momentum (CoM) is respected by all input diagrams")
-    parser.add_argument('-C', '--check-CoM-FORM', action='append_const', const='C', dest='actions',
-                        help="""Like -c, but generate a FORM program to do the checking
-                                This is useful if CoM relies on additional processing""")
+    parser.add_argument('-C', '--check-CoM-form', action='append_const', const='C', dest='actions',
+                        help=f"Like -c, but generate a FORM program to do the checking{newline()}This is useful if CoM relies on additional processing")
     parser.add_argument('-b', '--compute-basis', action='append_const', const='b', dest='actions',
-                        help="""Determine how any scalar product of loop and external momenta can be expressed in terms of the basis of inverse propagators provided
-                                This is both loaded into the program and printed as a set of B, which can be pasted into the .chpt file for future use""")
+                        help=f"Determine how any scalar product of loop and external momenta can be expressed in terms of the basis of inverse propagators provided{newline()}This is both loaded into the program and printed as a set of B, which can be pasted into the .chpt file for future use")
     parser.add_argument('-g', '--generate-graphs', action='append_const', const='g', dest='actions',
                         help="produce Mathematica code for drawing (very ugly) graphs of the diagrams, for verifying that the topologies have been properly implemented")
     parser.add_argument('-f', '--generate-form', action='append_const', const='f', dest='actions',
                         help="produce FORM code for computing the diagrams")
     parser.add_argument('-F', '--generate-form-main', action='append_const', const='F', dest='actions',
-                        help="""produce a customizable FORM template program that uses the files generated with --generate-form
-                                This implies --generate-form and is a separate command to avoid overwriting customizations when regenerating the FORM files.""")
+                        help=f"produce a customizable FORM template program that uses the files generated with --generate-form{newline()}This implies --generate-form and is a separate command to avoid overwriting customizations when regenerating the FORM files.")
 
     parser.add_argument('-d', '--define', action='append',
-                        help="""Define FORM preprocessor variables and pass them to FORM.
-                                Uses the same -d NAME(=VALUE) syntax as FORM.""")
+                        help=f"Define FORM preprocessor variables and pass them to FORM.{newline()}Uses the same -d NAME(=VALUE) syntax as FORM.")
 
     parser.add_argument('-v', '--verbose', action='store_true',
                         help="Say more about what is being done, including place of origin for all printouts")
