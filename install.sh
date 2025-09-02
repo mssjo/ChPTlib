@@ -1,8 +1,8 @@
 #!/bin/bash
 
 printf "#define LOCALDIR \".\"\n#define CHPTDIR \"$(pwd)\"\n" > dirs.hf
-printf "#!/bin/bash\npython3 $(pwd)/ChPTdiagram.py \$@\n" > ~/bin/ChPTdiagram
-chmod +x ~/bin/ChPTdiagram
+printf "#!/bin/bash\npython3 $(pwd)/ChPT.py \$@\n" > ~/bin/ChPT
+chmod +x ~/bin/ChPT
 ./makeify_hf.sh dirs > /dev/null
 ./makeify_hf.sh names > /dev/null
 
