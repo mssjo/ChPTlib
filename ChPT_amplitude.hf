@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMAMPLITUDEHF'
-#define CHPTDIAGRAMAMPLITUDEHF
+#ifndef `CHPTAMPLITUDEHF'
+#define CHPTAMPLITUDEHF
 
 * Procedures relating to building amplitudes from diagrams
 

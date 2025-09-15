@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMHF'
-#define CHPTDIAGRAMHF
+#ifndef `CHPTLIBHF'
+#define CHPTLIBHF
 
 * The ChPT diagram calculation library
 

@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMEXTERNALHF'
-#define CHPTDIAGRAMEXTERNALHF
+#ifndef `CHPTEXTERNALHF'
+#define CHPTEXTERNALHF
 
 * Procedures related to specifying external states
 * Something of a work in progress -- expect heavy revisions

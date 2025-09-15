@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMUTILSHF'
-#define CHPTDIAGRAMUTILSHF
+#ifndef `CHPTUTILSHF'
+#define CHPTUTILSHF
 
 * Require parameters to be passed to FORM
 #procedure require(PARAM)

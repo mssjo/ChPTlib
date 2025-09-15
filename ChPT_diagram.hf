@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMDIAGRAMHF'
-#define CHPTDIAGRAMDIAGRAMHF
+#ifndef `CHPTDIAGRAMHF'
+#define CHPTDIAGRAMHF
 
 * Procedures related to building diagrams from vertices
 * NOTE: this used to be a more extensive library, but has mostly been supplanted
@@ -155,7 +155,7 @@
     #ifdef `CHECKPROPS'
         if(match(prop(?a)));
             print "NOTE: in `DIAGRAM': %t";
-            #if (isdefined(CHPTDIAGRAMPY))&&(isdefined(REPLARG)==0)
+            #if (isdefined(CHPTLIBPY))&&(isdefined(REPLARG)==0)
                 print "NOTE: REPLARG not defined, which might cause this";
             #endif
             exit "ERROR: failed to substitute all propagators";

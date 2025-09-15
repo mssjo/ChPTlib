@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMDEFSHF'
-#define CHPTDIAGRAMDEFSHF
+#ifndef `CHPTDEFSHF'
+#define CHPTDEFSHF
 
 * Definitions for the ChPT diagram library
 
@@ -127,10 +127,10 @@
 #endif
 
 * Number of flavors
+symbol Nf;
 #ifndef `NF'
     #define NFGENERAL
     #define NF "Nf"
-    symbol Nf;
 #endif
 
 ********************************************************************************

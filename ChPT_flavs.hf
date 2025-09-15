@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMFLAVSHF'
-#define CHPTDIAGRAMFLAVSHF
+#ifndef `CHPTFLAVSHF'
+#define CHPTFLAVSHF
 
 * Flavor structures and their associated information
 * For use in ChPT_external.hf
@@ -8,8 +8,13 @@
 
 
 #ifndef `FLAVS'
-    #define FLAVS "`NEXT'"
-    #message[flavs]~~~ FLAVS not defined, defaulting via NEXT to `NEXT' (pions only)
+    #ifdef `NM'
+        #define FLAVS "`NM'"
+        #message[flavs]~~~ FLAVS not defined, defaulting via NM to `NM' (pions only)
+    #else
+        #define FLAVS "`NEXT'"
+        #message[flavs]~~~ FLAVS not defined, defaulting via NEXT to `NEXT' (pions only)
+    #endif
 #endif
 #define CAYHAMID "id,ifmatch->cayham"
 #define TRACES "Tr"
@@ -125,8 +130,6 @@
 
     #default
         #ifndef `FLAVS`FLAVS''
-            #message[flavs]~~~ Generating flavor structures for FLAVS=`FLAVS'
-
             #include- names.hf
             #define FLAVDIR "`CHPTDIR'/flavs"
 
@@ -136,7 +139,7 @@
                 #define FLAVFILE "`FLAVDIR'/flav`FLAVS'_SUN.hf"
             #endif
 
-            #system cd `FLAVDIR'/.. && pwd && echo "`MAKECMD' NM=`NEXT' `FLAVFILE'" && `MAKECMD' NM=`NEXT' `FLAVFILE'
+            #system cd `FLAVDIR'/.. && `MAKECMD' NM=`FLAVS' `FLAVFILE'
             #include- `FLAVFILE'
         #endif
     #endswitch
