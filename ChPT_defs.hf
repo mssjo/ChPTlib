@@ -89,7 +89,7 @@
 * Options for NG manifold parametrization
 #ifndef `PAR'
     #message[defs]~~~ PAR not defined, parametrization defaulting to EXP
-    #define PARAM "EXP"
+    #define PAR "EXP"
 #else
     #switch `PAR'
         #case GEN

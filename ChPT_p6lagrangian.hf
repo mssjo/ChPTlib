@@ -251,7 +251,7 @@
               - i_*tr( fp(mu,mu,nu), u(ro), h(nu,ro) )                         )
 * Contact terms
 #call p6term(113,91,54)
-            (      tr( chi(mu), chidag(mu) )                                  )
+            (      tr( chix(mu), chidagx(mu) )                                  )
 #call p6term(114,92,55)
             (   i_*tr( FL(mu,nu), FL(mu,ro), FL(ro,nu) )
               + i_*tr( FR(mu,nu), FR(mu,ro), FR(ro,nu) )                        )
@@ -265,8 +265,8 @@
                     (      tr( chidag, chitil ) + tr( chi, chitildag )        ) / 3
     #elseif `NF'==2
         #call p6term(X,X,57)
-                    (      tr( chi(mu), chitil(mu) )
-                        + tr( chidag(mu), chitildag(mu) )                     )
+                    (      tr( chix(mu), chitil(mu) )
+                        + tr( chidagx(mu), chitildag(mu) )                     )
     #endif
 #endif
 

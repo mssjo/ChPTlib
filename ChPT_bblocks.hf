@@ -86,14 +86,14 @@
     #do NM=0,`NNM'
         #define NMC "{`NNM'-`NM'}"
         #do NV=0,`NNV'
-            #define NVC "{`NNV'-`NV'}"
+            #define NVC "{`NNV'-`NV'}"x
             #do NA=0,`NNA'
                 #define NAC "{`NNA'-`NA'}"
                 #define NVECTOR "{`NV'+`NA'}"
                 #do NS=0,`NNS'
                     #define NSC "{`NNS'-`NS'}"
                     #do NP=0,`NNP'
-                        #define NPC "{`NNA'-`NA'}"
+                        #define NPC "{`NNP'-`NP'}"
                         #define NSCALAR "{`NS'+`NP'}"
                         `LOOPBODY'
                     #enddo
@@ -138,19 +138,19 @@
     #endif
 #endif
 #if `ORDER' >= 6
-    #redefine BBLOCKS1 "`BBLOCKS1',chipx,chimx,chip,chim,chi,chidag"
+    #redefine BBLOCKS1 "`BBLOCKS1',chix,chidagx,chipx,chimx,chip,chim,chi,chidag"
     #redefine BBLOCKS2 "`BBLOCKS2',h,u"
     #define BBLOCKS3 "FL,FR,fp,fm"
     #ifdef `NF'
         #if `NF'==3
             #redefine BBLOCKS0 "`BBLOCKS0',chitil,chitildag"
         #elseif `NF'==2
-            #redefine BBLOCKS1 "`BBLOCKS1',chi,chidag,chitil,chitildag"
+            #redefine BBLOCKS1 "`BBLOCKS1',chitil,chitildag"
         #endif
     #endif
 #endif
 #if `ORDER' >= 8
-    #redefine BBLOCKS2 "`BBLOCKS2',chi,chidag,chip,chim"
+    #redefine BBLOCKS2 "`BBLOCKS2',chix,chidagx,chip,chim"
     #redefine BBLOCKS3 "`BBLOCKS3',u,chip,chim"
     #define BBLOCKS4 "FL,FR,fp,fm,chip,chim"
     #define BBLOCKS5 "fp,fm"
@@ -160,9 +160,9 @@
         #if `NF'==4
             #redefine BBLOCKS0 "`BBLOCKS0',chitil,chitildag"
         #elseif `NF'==3
-            #redefine BBLOCKS0 "`BBLOCKS1',chi,chidag,chitil,chitildag"
+            #redefine BBLOCKS0 "`BBLOCKS1',chitil,chitildag"
         #elseif `NF'==2
-            #redefine BBLOCKS2 "`BBLOCKS2',chi,chidag,chitil,chitildag"
+            #redefine BBLOCKS2 "`BBLOCKS2',chitil,chitildag"
         #endif
     #endif
 #endif

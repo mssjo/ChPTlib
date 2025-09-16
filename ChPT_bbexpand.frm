@@ -385,6 +385,23 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #call substitute(u,1)
             #break
 
+*         chi appearing as-is in the Lagrangian, derivatives are covariant
+        #case chidagx
+            #redefine rl "l"
+            #redefine lr "r"
+            #redefine dag "dag"
+*             INTENTIONAL FALL-THROUGH
+        #case chix
+            #if `RANK'>0
+                #call covar(`BBLOCK',{`RANK'-1},`rl',`lr')
+            #else
+                chi`dag'(`FIELDS')
+            #endif
+            ;
+
+            #call substitute(chi,0)
+            #break
+
 *         chitil = (det(chi)/chi)^-1, used in some contact terms
         #case chitildag
             #redefine rl "l"
@@ -470,7 +487,7 @@ if(0
     );
     print "[bbexpand] ERROR: inexact term detected:";
     #do X={`FIELDTYPES'}
-        #ifdef `HAs`X''
+        #ifdef `HAS`X''
             print "[bbexpand]   (N`X'=`N`X'')";
         #endif
     #enddo

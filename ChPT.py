@@ -445,7 +445,18 @@ class Diagram:
                         case 'V':
                             # NOTE: the use of ext is to ensure that Schoonschip notation doesn't spoil the
                             #       pattern matching of subsequent id's, which it would with a naked vector
-                            print(f"id,all A(?lorentz, mu?mu{tag}x) = ext(external[{ext}], mu) * derivs(p{ext}, ?lorentz);", file=formfile)
+                            # NOTE: QED uses A for the photon, otherwise that is the axial vector
+                            print('\n'.join([
+                                "#ifdef `QED'",
+                                f"    id,all A(?lorentz, mu?mu{tag}x) = ext(external[{ext}], mu) * derivs(p{ext}, ?lorentz);",
+                                "#else",
+                                f"    id,all V(?lorentz, mu?mu{tag}x) = ext(external[{ext}], mu) * derivs(p{ext}, ?lorentz);",
+                                "#endif"
+                                ]), file=formfile)
+                        case 'A':
+                            print(f"    id,all A(?lorentz, mu?mu{tag}x) = ext(external[{ext}], mu) * derivs(p{ext}, ?lorentz);", file=formfile)
+                        case 'S' | 'P':
+                            print(f"    id,all {particle}(?lorentz) = derivs(p{ext}, ?lorentz);", file=formfile)
                         case _:
                             raise ChPTError(f"Particle type '{particle}' not implemented for pickout")
 
@@ -916,7 +927,7 @@ DEFAULT_STEPS = {
         "*     Remove if e.g. propagators are to be handled separately",
         "#define REPLARG"],
     'vertices': [
-        "* This creates all the vertices, and may be a bit time-consuming.",
+        "* [vertices] This creates all the vertices, and may be a bit time-consuming.",
         "* The extraction from the Lagrangian is cached, so it should run faster in subsequent runs.",
         "#include- {0}/vertices.hf"],
     'diagram': [
@@ -1275,13 +1286,13 @@ class DiagramSet:
 
         return '\n'.join(chain(
             [f"#procedure {key}(DIAGRAM)"],
-            (indent(line, " "*4) for line in head),
+            head,
             [''],
             custom.before,
-            [indent(body, " "*4) if custom.keep_default else f"* [default body of procedure {key} disabled]"],
+            [body if custom.keep_default else f"* [default body of procedure {key} disabled]"],
             custom.after,
             [''],
-            (indent(line, " "*4) for line in tail),
+            tail,
             ["#endprocedure"]
             ))
 
@@ -1319,24 +1330,24 @@ class DiagramSet:
 
         print('\n\n'.join((
             self.insert_procedure('trivialkinematics',
-                '\n\n'.join(dedent(f'''\
+                '\n\n'.join(indent(dedent(f'''\
                     id prop({+prop.momentum.substituted(self.vector_replacements)},{prop.mass_squared}) = prop{i+1};
-                    id prop({-prop.momentum.substituted(self.vector_replacements)},{prop.mass_squared}) = prop{i+1};''')
+                    id prop({-prop.momentum.substituted(self.vector_replacements)},{prop.mass_squared}) = prop{i+1};'''), ' '*4)
                     for i,prop in enumerate(self.propagators) if not prop.flav_dependent)
                 ),
             self.insert_procedure('fullkinematics',
-                '\n'.join(dedent(f'''\
+                '\n'.join(indent(dedent(f'''\
                     id {p}.{q} = {' '.join(
                         (f'- {coeff[1:]}*' if coeff.startswith('-') else f'+ {coeff}*' if coeff != '1' else '')
                         + (f'(1/prop{i+1} + {self.propagators[i].mass_squared})'
                            if i < len(self.propagators) else
                            f'({".".join(str(q) for q in self.independent_products[i - len(self.propagators)])})')
                         for i, coeff in enumerate(coeffs) if coeff != '0')
-                    };''')
+                    };'''), ' '*4)
                     for (p,q), coeffs in self.scalar_products.items())
                 ),
             self.insert_procedure('replacements',
-                dedent(f'''\
+                indent(dedent(f'''\
                     repeat;
                         #call replacementlist(`DIAGRAM')
                         #ifdef `REPLARG'
@@ -1344,10 +1355,10 @@ class DiagramSet:
                                 #call replacementlist(`DIAGRAM')
                             endargument;
                         #endif
-                    endrepeat;''')
-                ),
+                    endrepeat;'''),
+                ' '*4)),
             self.insert_procedure('replacementlist',
-                    '\n'.join(f'id {lhs} = {rhs};' for lhs,rhs in self.replacements())
+                    '\n    '.join(f'id {lhs} = {rhs};' for lhs,rhs in self.replacements())
                 )
             )), file=formfile)
 
@@ -1583,7 +1594,7 @@ class DiagramSet:
                     * If diagrams are split into multiple expressions
                     *  (say, projected onto different tensor structures),
                     *  modify this so it nskips all variants of DIAGRAM's name.
-                    skip; nskip `DIAGRAM';""")),
+                        skip; nskip `DIAGRAM';""")),
                 f"",
                 self.insert_step('vertices', dirname),
                 f"",
@@ -1641,7 +1652,7 @@ def print_info_FORM(formfile, extra=[], auto=True):
 
     print("", file=formfile)
 
-def print_file_help():
+def print_chpt_help():
     def wrap(char = None):
         width = 80
         if char is None:
@@ -1728,8 +1739,8 @@ def main():
     args = parser.parse_args()
 
     # Cheat to endow -H with the same behavior as -h
-    if args.file_help:
-        print_file_help()
+    if args.chpt_help:
+        print_chpt_help()
         return 0
     elif not args.file:
         print(parser.usage, file=sys.stderr)
