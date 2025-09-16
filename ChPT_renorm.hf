@@ -1,3 +1,5 @@
+#ifndef `CHPTRENORMHF'
+#define CHPTRENORMHF
 
 #ifndef `SCHEME'
     #message[renorm]~~~ SCHEME not defined, defaulting to MSBAR (ChPT edition)
@@ -329,3 +331,5 @@
     id 1/[d]   = 1/4 * sum_(n,0,`MAXEPS', (eps/2)^n);
 
 #endprocedure
+
+#endif
