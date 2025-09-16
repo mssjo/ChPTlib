@@ -15,4 +15,4 @@ $ ChPT --help
 ```
 for further instructions, and inspect the generated code (`diagrams.frm` in the example above) for guidance on how to use the FORM library.
 
-Requires python 3, FORM (https://www.nikhef.nl/~form/) and my Python library for permutations (https://github.com/mssjo/permute/).
+Requires python 3, FORM (https://www.nikhef.nl/~form/) and my Python libraries for permutations (https://github.com/mssjo/permute/) and integer partitions (https://github.com/mssjo/ipart/).
