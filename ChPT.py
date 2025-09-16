@@ -1,12 +1,14 @@
+import argparse
 import re
 import sys,os
 import subprocess
-import argparse
+import traceback
 
 from collections.abc import Mapping
 from copy import copy, deepcopy
 from datetime import datetime
 from fractions import Fraction
+from itertools import chain
 from pathlib import Path
 from textwrap import TextWrapper, indent, dedent, fill
 
@@ -19,8 +21,8 @@ from permute import Permutation, Span, Sn, Trivial, Distributions
 import logging
 logger = logging.getLogger("ChPT")
 logextra = {'where': ''}
-EXTRAINFO = logging.INFO - 1
-logging.addLevelName(EXTRAINFO, "+INFO")
+VERBOSE = logging.INFO - 1
+logging.addLevelName(VERBOSE, "VERBOSE")
 # From https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
 # ... with some customization
 class ColorFormatter(logging.Formatter):
@@ -36,7 +38,7 @@ class ColorFormatter(logging.Formatter):
 
         self.formats = {
             logging.DEBUG: COLOR%BLUE + format + RESET,
-                    EXTRAINFO: COLOR%WHITE + format + RESET,
+                    VERBOSE: COLOR%WHITE + format + RESET,
             logging.INFO: COLOR%WHITE + BOLD + format + RESET,
             logging.WARNING: COLOR%YELLOW + BOLD + format + RESET,
             logging.ERROR: COLOR%RED + BOLD + format + RESET,
@@ -49,13 +51,29 @@ class ColorFormatter(logging.Formatter):
 
 AUTHOR = "ChPTlib, by Mattias Sjö 2025"
 
-# TODO: 'A': 'axial-vector', 'S': 'scalar', 'P': 'pseudoscalar'
-PARTICLES = {'M': 'meson', 'V': 'vector'}
+PARTICLES = {
+    'M': 'meson',
+    'V': 'vector',
+    'A': 'axial vector',
+    'S': 'scalar',
+    'P': 'pseudoscalar'}
 
 # Since \n is not allowed in f-strings, use this instead.
 # Supports various indentation options as well for convenience.
 def newline(indent=0, *, prefix='', infix='', suffix='', indent_str=' '*4):
     return prefix + '\n' + infix + indent_str*indent + suffix
+# Like ', '.join(items) but with final "and" (Oxford comma by default)
+def and_join(items, oxford=True):
+    items = list(items)
+    match len(items):
+        case 0:
+            return ""
+        case 1:
+            return items[0]
+        case 2:
+            return f"{items[0]} and {items[1]}"
+        case _:
+            return f"{', '.join(items[:-1])}{',' if oxford else ''} and {items[-1]}"
 
 class ChPTError(Exception):
     pass
@@ -355,7 +373,6 @@ class Diagram:
 
         return f"replace_({replace})"
 
-
     def define_FORM(self, global_vertex_roster, propagators, legs, loops, formdir, prefix = ''):
         vertex_roster = {}
         vertex_tag_map = {}
@@ -372,7 +389,7 @@ class Diagram:
             if (global_vertex_roster.get(vertex, 0)) < count:
                 global_vertex_roster[vertex] = count
 
-        diagram = f"diagram{prefix}{self.name}"
+        diagram = f"{prefix}diagram{self.name}"
 
         # Write the diagram's flags
         with open(f"{formdir}/flags/on_{diagram}.hf", 'w') as on, open(f"{formdir}/flags/off_{diagram}.hf", 'w') as off:
@@ -386,8 +403,8 @@ class Diagram:
                     print(f'#define {flag} "{value}"', file=on)
                 print(f'#undefine {flag}', file=off)
 
-            logger.log(EXTRAINFO, f"Wrote output file {on.name}", extra=logextra)
-            logger.log(EXTRAINFO, f"Wrote output file {off.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {on.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {off.name}", extra=logextra)
 
         # Define the diagram as the product of its vertices
         with open(f"{formdir}/diagrams/{diagram}.hf", 'w') as formfile:
@@ -459,7 +476,7 @@ class Diagram:
                 #call doderivs
                 #call dotrace({diagram})"""), file=formfile)
 
-            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {formfile.name}", extra=logextra)
 
         # If necessary, permute external legs
         with open(f"{formdir}/permute/{diagram}.hf", 'w') as formfile:
@@ -480,7 +497,7 @@ class Diagram:
             else:
                 print_info_FORM(formfile, f"This file is an empty placeholder, since the permutation group is trivial.")
 
-            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {formfile.name}", extra=logextra)
 
 
         with open(f"{formdir}/loops/{diagram}.hf", 'w') as formfile:
@@ -503,7 +520,7 @@ class Diagram:
                             """),
                         file=formfile)
 
-            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {formfile.name}", extra=logextra)
 
         return diagram
 
@@ -512,6 +529,9 @@ class Diagram:
 
     def get_order(self, loops):
         return 2 + 2*len(self.get_loop_momenta(loops)) + sum(vert.order - 2 for vert in self.vertices)
+
+    def get_particle_content(self):
+        return {p for vert in self.vertices for p in vert.legs.keys()}
 
 def specify_legs(token, legs):
     if token.isnumeric():
@@ -834,17 +854,17 @@ class Vertex:
         return hash((self.order, *self.legs.items()))
 
     def define_FORM(self, formfile, tag):
-        if set(self.legs.keys()) > {'M', 'V'}:
-            raise ChPTError("Particles other than mesons and vectors not supported by ChPT_vertex.hf")
+        if set(self.legs.keys()) > set(PARTICLES.keys()):
+            raise ChPTError(f"Particles other than {and_join(list(PARTICLES.values()))} not supported by ChPT_vertex.hf")
 
         name = self.name_FORM(tag)
 
-        print(f"#call makevertex({name},{self.legs.get('M', 0)},{self.legs.get('V', 0)},{self.order})", file=formfile)
+        print(f"#call makevertex({name},{self.order},{','.join(str(self.legs.get(p, 0)) for p in PARTICLES)})", file=formfile)
 
         return f"vert{name}"
 
     def name_FORM(self, tag=None):
-        return f"P{self.order}{''.join(f'{p}{n}' for p,n in self.legs.items())}{'' if tag is None else f'x{tag+1}'}"
+        return f"{order_OtoN(self.order)}x{''.join(f'{p}{n}' for p,n in self.legs.items() if n or p == 'M')}{'' if tag is None else f'x{tag+1}'}"
 
 class Propagator:
     def __init__(self, tokens, momenta):
@@ -886,6 +906,63 @@ class Edge:
     def __str__(self):
         return f"{self.source+1}-[{'(unresolved)' if self.unresolved else self.propagator}]->{self.destination+1}"
 
+DEFAULT_STEPS = {
+    'includes': [
+        "* [includes]",
+        "#include- {0}/definitions.hf",
+        "#include- {0}/kinematics.hf"],
+    'replarg': [
+        "* [replarg] This flag enables replacements also inside function arguments",
+        "*     Remove if e.g. propagators are to be handled separately",
+        "#define REPLARG"],
+    'vertices': [
+        "* This creates all the vertices, and may be a bit time-consuming.",
+        "* The extraction from the Lagrangian is cached, so it should run faster in subsequent runs.",
+        "#include- {0}/vertices.hf"],
+    'diagram': [
+        "* [diagram] This sets up the Feynman rules of the diagram and contracts the flavor indices",
+        "    #include- {0}/diagrams/`DIAGRAM'.hf"],
+    'permute': [
+        "* [permute] This performs all permutations of the diagram's external legs",
+        "    #include- {0}/permute/`DIAGRAM'.hf"],
+    'replace': [
+        "* [replace] This enacts all replacements specified with 'R'",
+        "    #call replacements(`DIAGRAM')"],
+    'loops': [
+        "* [loops] This identifies loop integrals",
+        "    #call fullkinematics(`DIAGRAM')",
+        "    #include- {0}/loops/`DIAGRAM'.hf"],
+    'check': [
+        "* [check] Check that all propagators were substituted",
+        "    #call checkprops"],
+    'postprocess': ["* [postprocess]"],
+    'print': [
+        "* [print] Print the results",
+        "bracket `LECS', F, i_;",
+        "print +s;"]
+    }
+DEFAULT_PROCEDURES = {
+    'nskip': ([], []),
+    'trivialkinematics': (
+        [".sort", "#call nskip(`DIAGRAM')"],
+        [".sort:>>trivial kinematics<<;"]
+        ),
+    'fullkinematics': (
+        [".sort", "#call trivialkinematics(`DIAGRAM')", "#call nskip(`DIAGRAM')"],
+        [".sort:>>full kinematics<<;", "#call replacements(`DIAGRAM')"]
+        ),
+    'replacements': (
+        [".sort", "#call nskip(`DIAGRAM')"],
+        [".sort:>>replacements<<;"]
+        ),
+    'replacementlist': ("", "")
+    }
+class Customization:
+    def __init__(self):
+        self.before = []
+        self.after = []
+        self.keep_default = True
+
 class DiagramSet:
 
     def __init__(self, filename, options=[]):
@@ -904,6 +981,8 @@ class DiagramSet:
         self.legs = {}
         self.options = options
 
+        self.customizations = {key: Customization() for key in chain(DEFAULT_STEPS, DEFAULT_PROCEDURES)}
+
         if not Path(filename).is_file():
             filename = f"{filename}.chpt"
 
@@ -912,7 +991,7 @@ class DiagramSet:
             for number, line in enumerate(file):
                 current_diagram = self.parse_statement(f"{filename}:{number+1}", line, current_diagram)
         self.add_diagram(current_diagram)
-        logextra['where'] = ''
+        logextra['where'] = filename
 
         if not self.name:
             self.name = Path(filename).stem
@@ -930,16 +1009,42 @@ class DiagramSet:
 
         logger.info(f"Read input file {filename}", extra=logextra)
 
+        self.particle_content = {f'{p}({PARTICLES[p][1:]})' for p in set(self.legs) | {p for diagr in self.diagrams.values() for p in diagr.get_particle_content()}}
+        logger.info(f"Particle content is {and_join(self.particle_content)}", extra=logextra)
+
+
     def parse_statement(self, where, line, diagram):
         logextra['where'] = where
-        tokens = [token.strip() for token in re.split(r'\s+', line) if token.strip()]
 
-        # Detect empty lines and full-line comments
-        if not tokens or not tokens[0] or tokens[0].startswith('#'):
+        # Discard commented-out portion of line (overridden in C-statements)
+        if not line.startswith('C') and (comment := line.find('#')) != -1:
+            line = line[:comment]
+
+        # Tokenize, ignore empty lines
+        tokens = [token.strip() for token in re.split(r'\s+', line) if token.strip()]
+        if not tokens:
             return diagram
 
+        # Process tokens, dress exceptions with location in file
         try:
+
+            # Enforce preample
+            if tokens[0] in 'NXMRLBPC' and diagram is not None:
+                raise ChPTError(f"'{tokens[0]}' may only be used in the preamble (before the first 'D')")
+            if tokens[0] in 'VESGF' and diagram is None:
+                raise ChPTError(f"'{tokens[0]}' may only be used inside a diagram (after 'D')")
+
             match tokens[0]:
+
+                case 'I':
+                    for filename in tokens[1:]:
+                        logger.debug(f"Importing file '{filename}'...", extra=logextra)
+                        with open(filename, 'r') as file:
+                            for n,l in enumerate(file):
+                                diagram = self.parse_statement(f"{where}>{filename}:{n+1}", l, diagram)
+
+                        logextra['where'] = where
+                        logger.info(f"Read input file {filename}", extra=logextra)
 
                 case 'N':
                     if self.name:
@@ -984,16 +1089,6 @@ class DiagramSet:
                             for i, coeff in enumerate(tokens[3:]) if coeff != '0')
                         }""", extra=logextra)
 
-                case 'I':
-                    for filename in tokens[1:]:
-                        logger.debug(f"Importing file '{filename}'...", extra=logextra)
-                        with open(filename, 'r') as file:
-                            for n,l in enumerate(file):
-                                diagram = self.parse_statement(f"{where}>{filename}:{n+1}", l, diagram)
-
-                        logextra['where'] = where
-                        logger.info(f"Read input file {filename}", extra=logextra)
-
                 case 'P':
                     prop = Propagator(tokens[1:], self.valid_momenta())
 
@@ -1004,7 +1099,15 @@ class DiagramSet:
                     self.propagators.append(prop)
                     logger.debug(f"Added propagator {len(self.propagators)}: {prop}", extra=logextra)
 
+                case 'C':
+                    if len(tokens) < 2:
+                        raise ChPTError(f"Missing key in C-statement")
+                    key = tokens[1]
+                    self.customize(key, line[line.find(key)+len(key)+1:].rstrip())
+
                 case 'D':
+                    if len(tokens) < 2:
+                        raise ChPTError(f"Missing diagram name in D-statement")
                     self.add_diagram(diagram)
                     diagram = Diagram(tokens[1], sum(self.legs.values()))
                     if diagram.name in self.diagrams:
@@ -1012,9 +1115,6 @@ class DiagramSet:
                     logger.debug(f"Initialized diagram '{diagram.name}'", extra=logextra)
 
                 case 'V':
-                    if diagram is None:
-                        raise ChPTError("Vertex must be inside diagram (expected 'D' before 'V')")
-
                     if len(tokens) >= 2 and tokens[1][0] == '@':
                         reference = tokens[1][1:]
                         if reference not in self.diagrams:
@@ -1027,9 +1127,6 @@ class DiagramSet:
                         diagram.add_vertex( Vertex(tokens[1:]) )
 
                 case 'E':
-                    if diagram is None:
-                        raise CHPTError("Edge must be inside diagram (expected 'D' before 'E')")
-
                     if len(tokens) >= 2 and tokens[1][0] == '@':
                         reference = tokens[1][1:]
                         if reference not in self.diagrams:
@@ -1042,8 +1139,6 @@ class DiagramSet:
                         diagram.add_edge( Edge(diagram.vertices, diagram.vertex_name_map, self.propagators, self.propagator_name_map, tokens[1:]) )
 
                 case 'S':
-                    if diagram is None:
-                        raise ChPTError("Symmetry factor must be inside diagram (expected 'D' before 'S')")
 
                     if len(tokens) < 2:
                         raise ChPTError(f"Missing symmetry factor in S-statement")
@@ -1051,9 +1146,6 @@ class DiagramSet:
                     diagram.set_symmetry_factor(tokens[1:])
 
                 case 'G':
-                    if diagram is None:
-                        raise CHPTError("Group must be inside diagram (expected 'D' before 'G')")
-
                     if len(tokens) >= 2 and tokens[1][0] == '@':
                         reference = tokens[1][1:]
                         if reference not in self.diagrams:
@@ -1065,13 +1157,13 @@ class DiagramSet:
                         diagram.set_permutation_group(tokens[1:])
 
                 case 'F':
-                    if diagram is None:
-                        raise ChPTError("Flags must be inside diagram (expected 'D' before 'F')")
-
                     diagram.add_flags(tokens[1:])
 
                 case _:
                     raise ChPTError(f"Unknown statement '{tokens[0]}'")
+
+        except IndexError:
+            raise ChPTError("Missing compulsory argument" + indent(f"at {where}{newline(1)}{line}", ' '*4))
 
         except (ChPTError, FileNotFoundError) as err:
             errstr = str(err)
@@ -1117,6 +1209,83 @@ class DiagramSet:
             logger.debug(f" Reason: {err}", extra=logextra)
             self.other_replacements.append( (lhs, rhs) )
 
+    def customize(self, fullkey, line):
+        if fullkey == '-d':
+            logger.log(VERBOSE, f"Defining FORM preprocessor variable {line.strip()}", extra=logextra)
+            self.options.append(line.strip())
+            return
+
+        variant = "after"
+        if fullkey.endswith(".before"):
+            variant = "before"
+            key = fullkey[:-len(".before")]
+        elif fullkey.endswith(".after"):
+            variant = "after"
+            key = fullkey[:-len(".after")]
+        elif fullkey.endswith("!"):
+            variant = "!"
+            key = fullkey[:-1]
+        else:
+            key = fullkey
+
+        try:
+            match variant:
+                case "!":
+                    self.customizations[key].keep_default = False
+                case "before":
+                    self.customizations[key].before.append(line)
+                case "after":
+                    self.customizations[key].after.append(line)
+        except KeyError:
+            raise ChPTError(f"No such step or procedure: {key}")
+
+    def insert_step(self, key, *args):
+        custom = self.customizations[key]
+
+        if logger.level <= VERBOSE:
+            for line in custom.before:
+                logger.log(VERBOSE, f"Inserting before step {key}: {line}", extra=logextra)
+            if not custom.keep_default:
+                logger.log(VERBOSE, f"Suppressing step {key}", extra=logextra)
+            for line in custom.after:
+                logger.log(VERBOSE, f"Inserting after step {key}: {line}", extra=logextra)
+
+        return '\n'.join(chain(
+            (line.format(*args) for line in custom.before),
+            (line.format(*args) for line in DEFAULT_STEPS[key]) if custom.keep_default else [f"* [step {key} disabled]"],
+            (line.format(*args) for line in custom.after)
+            ))
+
+    def insert_procedure(self, key, body):
+        custom = self.customizations[key]
+
+        if not any((custom.keep_default, custom.before, custom.after)):
+            logger.log(VERBOSE, f"Omitting procedure {key} altogether", extra=logextra)
+            return f"* [procedure {key} disabled]"
+
+        if logger.level <= VERBOSE:
+            for line in custom.before:
+                logger.log(VERBOSE, f"Inserting before procedure {key}: {line}", extra=logextra)
+            if not custom.keep_default:
+                logger.log(VERBOSE, f"Suppressing procedure {key}", extra=logextra)
+            for line in custom.after:
+                logger.log(VERBOSE, f"Inserting after procedure {key}: {line}", extra=logextra)
+
+        head, tail = DEFAULT_PROCEDURES[key]
+
+        return '\n'.join(chain(
+            [f"#procedure {key}(DIAGRAM)"],
+            (indent(line, " "*4) for line in head),
+            [''],
+            custom.before,
+            [indent(body, " "*4) if custom.keep_default else f"* [default body of procedure {key} disabled]"],
+            custom.after,
+            [''],
+            (indent(line, " "*4) for line in tail),
+            ["#endprocedure"]
+            ))
+
+
     def replacements(self):
         return self.vector_replacements + self.other_replacements
 
@@ -1128,7 +1297,6 @@ class DiagramSet:
 
     def all_propagators(self):
         return set(self.propagators) | {e.propagator for d in self.diagrams.values() for e in d.edges if not e.unresolved}
-
 
     def print_definitions_FORM(self, formfile):
         print(dedent(f'''
@@ -1148,70 +1316,40 @@ class DiagramSet:
             '''), file=formfile)
 
     def print_kinematics_FORM(self, formfile):
-        print(dedent("""\
-            #procedure trivialkinematics(DIAGRAM)
-                .sort
-                #call nskip(`DIAGRAM')"""),
-            file=formfile)
 
-        #Straightforward momentum relations
-        for i,prop in enumerate(self.propagators):
-            if prop.flav_dependent:
-                continue
-            print(indent(dedent(f"""\
+        print('\n\n'.join((
+            self.insert_procedure('trivialkinematics',
+                '\n\n'.join(dedent(f'''\
                     id prop({+prop.momentum.substituted(self.vector_replacements)},{prop.mass_squared}) = prop{i+1};
-                    id prop({-prop.momentum.substituted(self.vector_replacements)},{prop.mass_squared}) = prop{i+1};"""), " "*4),
-                    #id [{prop.momentum}].[{prop.momentum}] = 1/prop{i+1} + {prop.mass_squared};
-                    file=formfile)
-        #for prop in self.all_propagators():
-            #print(f"    id [{prop.momentum}] = {prop.momentum};", file=formfile)
-
-        print(dedent(f"""\
-                        .sort:>>trivial kinematics<<;
-                    #endprocedure
-
-                    #procedure fullkinematics(DIAGRAM)
-                        #call trivialkinematics(`DIAGRAM')
-                        #call nskip(`DIAGRAM')
-                    """), file=formfile)
-
-        # Basis relations
-        for (p,q), coeffs in self.scalar_products.items():
-            print(indent(dedent(f"""\
+                    id prop({-prop.momentum.substituted(self.vector_replacements)},{prop.mass_squared}) = prop{i+1};''')
+                    for i,prop in enumerate(self.propagators) if not prop.flav_dependent)
+                ),
+            self.insert_procedure('fullkinematics',
+                '\n'.join(dedent(f'''\
                     id {p}.{q} = {' '.join(
                         (f'- {coeff[1:]}*' if coeff.startswith('-') else f'+ {coeff}*' if coeff != '1' else '')
                         + (f'(1/prop{i+1} + {self.propagators[i].mass_squared})'
                            if i < len(self.propagators) else
                            f'({".".join(str(q) for q in self.independent_products[i - len(self.propagators)])})')
                         for i, coeff in enumerate(coeffs) if coeff != '0')
-                    };"""), " "*4),
-                    file=formfile)
-
-        print(dedent(f"""\
-                    .sort:>>full kinematics<<;
-                    #call replacements(`DIAGRAM')
-                #endprocedure
-
-                #procedure replacements(DIAGRAM)
-                    .sort
-                    #call nskip(`DIAGRAM')
-
+                    };''')
+                    for (p,q), coeffs in self.scalar_products.items())
+                ),
+            self.insert_procedure('replacements',
+                dedent(f'''\
                     repeat;
-                        #call replacementlist
+                        #call replacementlist(`DIAGRAM')
                         #ifdef `REPLARG'
                             argument;
-                                #call replacementlist
+                                #call replacementlist(`DIAGRAM')
                             endargument;
                         #endif
-                    endrepeat;
-                    .sort:>>replacements<<;
-                #endprocedure
-
-                #procedure replacementlist()
-                    {newline(5).join(f'id {lhs} = {rhs};' for lhs,rhs in self.replacements())}
-                #endprocedure
-                """),
-                file=formfile)
+                    endrepeat;''')
+                ),
+            self.insert_procedure('replacementlist',
+                    '\n'.join(f'id {lhs} = {rhs};' for lhs,rhs in self.replacements())
+                )
+            )), file=formfile)
 
     def sp_symbols(self):
         return {s : s for s in self.external_momenta() + self.loop_momenta + self.independent_momenta}
@@ -1220,19 +1358,26 @@ class DiagramSet:
         print("#-", file=formfile)
         print(f"#appendpath {os.getcwd()}", file=formfile)
 
+        Nf = None
+
         for opt in self.options:
             if opt[0] == '-':
                 continue
 
             eq = opt.find('=')
             if eq >= 0:
-                if opt[:eq] == 'NF':
-                    Nf = int(opt[eq+1:])
+                # if opt[:eq] == 'NF':
+                #     Nf = int(opt[eq+1:])
+                # elif opt[:eq] == 'PAR' and opt[eq+1:] == 'SQRT':
+                #     Nf = "2"
                 print(f'#define {opt[:eq]} "{opt[eq+1:]}"', file=formfile)
             else:
-                if opt == 'KALPAR':
-                    Nf = "2"
                 print(f"#define {opt}", file=formfile)
+
+        if 'V' in self.particle_content or 'A' in self.particle_content:
+            print("#define HASVECTOR", file=formfile)
+        if 'S' in self.particle_content or 'P' in self.particle_content:
+            print("#define HASSCALAR", file=formfile)
 
         print(dedent(f'''\
                 #define NEXT "{sum(self.legs.values())}"
@@ -1369,7 +1514,7 @@ class DiagramSet:
 
         # Have each diagram write its definitions, accumulating a total roster of vertices needed
         diagram_names = [
-            diagram.define_FORM(vertex_roster, self.propagators, self.legs, set(self.loop_momenta), dirname, prefix = f"{self.name}x")
+            diagram.define_FORM(vertex_roster, self.propagators, self.legs, set(self.loop_momenta), dirname, prefix = f"{self.name}")
             for diagram in self.diagrams.values()
             ]
 
@@ -1383,7 +1528,7 @@ class DiagramSet:
                 for index in range(count)
                 ]
 
-            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {formfile.name}", extra=logextra)
 
         with open(f"{dirname}/definitions.hf", 'w') as formfile:
             print_info_FORM(formfile, "This file defines all variables specific to this calculation.")
@@ -1398,13 +1543,13 @@ class DiagramSet:
                         #define VERTEXNAMES "{",".join(vertex_names)}"
                         '''), file=formfile)
 
-            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {formfile.name}", extra=logextra)
 
         with open(f"{dirname}/kinematics.hf", 'w') as formfile:
             print_info_FORM(formfile, "This file defines procedures for simplifying the kinematics.")
             self.print_kinematics_FORM(formfile)
 
-            logger.log(EXTRAINFO, f"Wrote output file {formfile.name}", extra=logextra)
+            logger.log(VERBOSE, f"Wrote output file {formfile.name}", extra=logextra)
 
         logger.info(f"Wrote output directory {dirname}/", extra=logextra)
         return dirname
@@ -1426,69 +1571,56 @@ class DiagramSet:
             # Define options, include relevant headers
             self.print_header_FORM(formfile)
 
-            print(dedent(f'''
-                * This flag lets various procedures know that the program was generated by ChPT.py
-                #define GENERATEDBYCHPTPY
-                #include- {dirname}/definitions.hf
-                #include- {dirname}/kinematics.hf
-
-                * This flag enables replacements also inside function arguments
-                * Remove if e.g. propagators are to be handled separately
-                #define REPLARG
-
-                * If diagrams are split into multiple expressions (say, projected onto different tensor structures),
-                *  modify this so it nskips all variants of DIAGRAM's name.
-                #procedure nskip(DIAGRAM)
-                    skip; nskip `DIAGRAM';
-                #endprocedure
-
-                * This creates all the vertices, and may be a bit time-consuming.
-                * The extraction from the Lagrangian is cached, so it should run faster in subsequent runs.
-                #include- {dirname}/vertices.hf
-
-                * Main loop - this will create and process each diagram in turn
-                * Each repetition is done with the active diagram's flags enabled.
-                #do DIAGRAM={{`DIAGRAMNAMES'}}
-                    .sort
-                    skip;
-                    #include- {dirname}/flags/on_`DIAGRAM'.hf
-
-                *    NOTE: any custom manipulations inserted between either of these steps should
-                *    be guarded with #call nskip(`DIAGRAM') at the start of each module
-
-                *    This sets up the Feynman rules of the diagram and contracts the flavor indices
-                    #include- {dirname}/diagrams/`DIAGRAM'.hf
-
-                *    This performs all permutations of the diagram's external legs
-                    #include- {dirname}/permute/`DIAGRAM'.hf
-
-                *    This enacts all replacements specified with 'R'
-                    #call replacements(`DIAGRAM')
-
-                *    This identifies loop integrals
-                    #call fullkinematics(`DIAGRAM')
-                    #include- {dirname}/loops/`DIAGRAM'.hf
-
-                *    Check that all propagators were substituted
-                *    Only used if CHECKPROPS is defined
-                     #call checkprops
-
-                    #include- {dirname}/flags/off_`DIAGRAM'.hf
-                #enddo
-
-                .sort:>>all {self.name} diagrams<<;
-                off statistics;
-                drop `VERTEXNAMES';
-
-                * Room for custom post-processing.
-
-                * Print and store results
-                bracket `LECS', F, i_;
-                print +s;
-                .sort
-                #call save({self.name})
-                .end'''), file=formfile)
-
+            print('\n'.join((
+                f"* This flag lets various procedures know that the program was generated by ChPT.py",
+                f"#define GENERATEDBYCHPTPY",
+                f"",
+                self.insert_step('includes', dirname),
+                f"",
+                self.insert_step('replarg', dirname),
+                f"",
+                self.insert_procedure('nskip', dedent(f"""\
+                    * If diagrams are split into multiple expressions
+                    *  (say, projected onto different tensor structures),
+                    *  modify this so it nskips all variants of DIAGRAM's name.
+                    skip; nskip `DIAGRAM';""")),
+                f"",
+                self.insert_step('vertices', dirname),
+                f"",
+                f"* Main loop - this will create and process each diagram in turn",
+                f"* Each repetition is done with the active diagram's flags enabled.",
+                f"#do DIAGRAM={{`DIAGRAMNAMES'}}",
+                f"    .sort",
+                f"    skip;",
+                f"    #include- {dirname}/flags/on_`DIAGRAM'.hf",
+                f"",
+                f"*    NOTE: any custom manipulations inserted between either of these steps should",
+                f"*    be guarded with #call nskip(`DIAGRAM') at the start of each module",
+                f"",
+                self.insert_step('diagram', dirname),
+                f"",
+                self.insert_step('permute', dirname),
+                f"",
+                self.insert_step('replace', dirname),
+                f"",
+                self.insert_step('loops', dirname),
+                f"",
+                self.insert_step('check', dirname),
+                f"",
+                f"    #include- {dirname}/flags/off_`DIAGRAM'.hf",
+                f"#enddo",
+                f"",
+                f".sort:>>all {self.name} diagrams<<;",
+                f"off statistics;",
+                f"drop `VERTEXNAMES';",
+                f"",
+                self.insert_step('postprocess', dirname),
+                f"",
+                self.insert_step('print', dirname),
+                f".sort",
+                f"#call save({self.name})",
+                f".end"
+                )), file=formfile)
             logger.info(f"Wrote output file {formfile.name}", extra=logextra)
 
         logging.info(dedent(f"""\
@@ -1517,18 +1649,18 @@ def print_file_help():
         else:
             return TextWrapper(width=width, initial_indent=f' {char} ', subsequent_indent='    ')
     print('\n'.join([
-          wrap().fill("The .chpt file format is a very simple way of describing multiloop diagrams in ChPT using a formulation suitable for master integral reduction. All non-empty lines contain a single statement, consisting of a single character specifying the type of statement followed by a number of whitespace-separated arguments."),
+          wrap().fill("The .chpt file format is a very simple way of describing multiloop Feynman diagrams in ChPT using a formulation suitable for master integral reduction. All non-empty lines contain a single statement, consisting of a single character specifying the type of statement followed by a number of whitespace-separated arguments. The character '#' will cause the remainder of the lineto be ignored (except in C-statements, which are read verbatim)."),
           "The statement types are the following:",
-          wrap('#').fill("Comment, ignore the rest of the line."),
           wrap('I').fill("Input the contents of other .chpt files given as arguments."),
-          wrap('N').fill("Name the diagram set according to the single argument. Exactly one N-statement must be given."),
-          wrap('X').fill("Specify the number of external legs (all diagrams have the same). Each argument is a number followed by a character specifying the type of particle. The particle types are M(eson), V(ector), A(xial vector), S(calar) and P(seudoscalar). The particle specifier defaults to M(eson) if omitted. The number of each type of particle may be specified only once, and defaults to zero. External legs are assigned incoming momenta pi, with i being a 1-based index, assigned incrementally with mesons first, then vectors, etc."),
+          wrap('N').fill("Name the diagram set according to the single argument. If no N-statement is given, the set is named after the .chpt file. The name should only consist of letters (no numbers, underscores, etc.) in order to be compatible with both FORM and Mathematica variable name formats."),
+          wrap('X').fill(f"Specify the number of external legs (all diagrams have the same). Each argument is a number followed by a character specifying the type of particle. The particle types are {and_join([f'{p}({n[1:]})' for p,n in PARTICLES.items()])}. The particle specifier defaults to M(eson) if omitted. The number of each type of particle may be specified only once, and defaults to zero. External legs are assigned incoming momenta pi, with i being a 1-based index, assigned incrementally with mesons first, then vectors, etc."),
           wrap('L').fill("Define loop momenta, each one given as a separate argument. Bear in mind that l1, l2, etc. may clash with the names of the LECs."),
           wrap('M').fill("Define external momenta, each one given as a separate argument. All independent external momenta should be explicitly given this way."),
           wrap('R').fill("Specify a replacement to be applied to the expressions. For example, this may be used to implement conservation of external momentum, or to replace the automatically assigned external momenta with user-defined ones. Takes two arguments, the left- and right-hand side of the replacement, respectively. Example: 'R p4 -(p1+p2+p3)' for 4-point diagrams. Bear in mind that the expressions should work in both FORM and Mathematica."),
           wrap('P').fill("Define a propagator. Takes two arguments: the momentum and mass-squared of the propagator. Propagators are numbered in the order they are specified, starting at 1. Bear in mind that for master integral reduction, all scalar products of loop momenta, and all scalar products of a loop momentum and an independent external momentum, must be expressible as a linear combination of squared propagator momenta. Thus, the number of propagators should be E*L + L*(L+1)/2 with L loops and E independent external momenta; this may require the inclusion of propagators that don't actually appear as a propagator in any diagram. The command 'basis' checks that this has been done correctly. The mass-squared may be given as '*', indicating flavor-dependent mass."),
           wrap('B').fill("Specify how a product of momenta is expressed as a linear combination of squared propagator momenta, as described under 'P'. The first two arguments are the momenta being multiplied together, and the following are the coefficients in front of each squared propagator momentum, in the order the propagators were defined. The command 'basis' automatically generates all necessary B-statements."),
-          wrap('D').fill("Initialize a new active diagram, and finalize the previous one, if any. [VESGF]-statements act on an active diagram, so a D-statement must be made before these can be used. It is recommended to give all other types of statements before the first D-statement, as a preamble. The first argument is compulsory, and gives the name of the diagram; this is combined with the diagram set name to produce the full diagram name. The second, optional argument gives the symmetry factor of the diagram. Exponents (^) and factorials (!) may be used and will automatically be translated to FORM and Mathematica syntax."),
+          wrap('C').fill(f"Specify a customization of the generated FORM files. The first argument (the KEY) should be the name of a computation step in the main FORM file ({and_join(list(DEFAULT_STEPS))}), each marked by [KEY] in the generated FORM code, or the name of a procedure ({and_join(list(key for key in DEFAULT_PROCEDURES))}), or -d. The latter case is special, and acts like the -d command line option. In the other cases, KEY may be followed by a suffix: KEY.before, KEY.after, or KEY! (lack of a suffix is equivalent to KEY.after). The remainder of the line is then taken as verbatim FORM code (except that in the steps, the sequence '{{0}}' is replaced by the path to the generated FORM directory) and inserted before or after (as specified) the computation step or procedure body. If KEY! is given, the default implementation of the step or procedure body is omitted. If the default procedure body is omitted and not replaced by a custom one, the entire procedure is omitted and should instead be provided elsewhere, e.g., through a separate KEY.prc file. Any number of customizations may be applied to the same KEY and will be applied in the order they are entered."),
+          wrap('D').fill("Initialize a new active diagram, and finalize the previous one, if any. [VESGF]-statements act on an active diagram, so a D-statement must be made before these can be used. It is recommended to give all other types of statements before the first D-statement, as a preamble. The compulsory argument gives the name of the diagram; this is combined with the diagram set name to produce the full diagram name."),
           wrap('V').fill("Define a vertex for the active diagram. There are three types of arguments, and they can be given in any order. If the argument is of the form of zero or more N's followed by 'LO', or alternatively 'N', a number representing the number of N's, and 'LO', that specifies the order of the vertex, defaulting to LO if omitted. If the argument would be accepted by an X-statement, it specifies the number of legs on the vertex as described there. Otherwise, the argument specifies the optional name of the vertex. Alternatively, there may be a single argument, consisting of '@' and the name of a previously defined diagram; this imports all vertices of that diagram as if all its V-statements were pasted in place of the 'V @...' Vertices are numbered in the order they are defined, starting at 1."),
           wrap('E').fill("Define an edge for the active diagram. There are three arguments: the number or name of the source vertex, the number or name of the destination vertex, and the number or momentum of the propagator represented by the edge. The momentum of the propagator flows from the source to  the destination. The propagator may instead be given as '*MASS', in which case the momentum will be deduced from conservation. MASS should be the mass-squared of the propagator, or another '*' to indicate flavor-dependent mass. Alternatively, there may be a single argument, consisting of '@' and the name of a previously defined diagram; this imports all edges of that diagram similarly to 'V @...'. Note that vertex names and numbers may be different in this diagram, so this should be used with caution."),
           wrap('S').fill("Endow the current diagram with a symmetry factor. The first argument should be an expression for the symmetry factor, by which the diagram will be divided. Exponents (^) and factorials (!) may be used and will automatically be translated to FORM and Mathematica syntax. Optional symmetry factors may be given, prefixed by the name of a FORM preprocessor variable and a colon. If that variable is defined at the moment the diagram is created, that factor will be used instead (the first one in the order given here takes precedence). There is an implicit NOSYMFACT:1 that overrides other alternative symmetry factors."),
@@ -1541,7 +1673,7 @@ def setup_logging(args):
         level=logging.ERROR
         format="[%(levelname)s] %(message)s"
     elif args.debug or args.verbose:
-        level=logging.DEBUG if args.debug else EXTRAINFO
+        level=logging.DEBUG if args.debug else VERBOSE
         format="[%(levelname)7s/%(where)s] %(message)s"
     else:
         level=logging.INFO
@@ -1565,33 +1697,33 @@ def main():
             {AUTHOR} (version 0.3)
             FORM code generator for chiral perturbation theory diagrams."""))
 
-    parser.add_argument('-H', '--file-help', action='store_true',
-                        help="Print information about the .chpt file format and exit")
+    parser.add_argument('-H', '--chpt-help', action='store_true',
+                        help="print information about the .chpt file format and exit")
     parser.add_argument('-c', '--check-CoM', action='append_const', const='c', dest='actions',
-                        help="Check that conservation of momentum (CoM) is respected by all input diagrams")
+                        help="check that conservation of momentum (CoM) is respected by all input diagrams")
     parser.add_argument('-C', '--check-CoM-form', action='append_const', const='C', dest='actions',
-                        help=f"Like -c, but generate a FORM program to do the checking{newline()}This is useful if CoM relies on additional processing")
+                        help=f"like -c, but generate a FORM program to do the checking{newline()}This is useful if CoM relies on additional processing")
     parser.add_argument('-b', '--compute-basis', action='append_const', const='b', dest='actions',
-                        help=f"Determine how any scalar product of loop and external momenta can be expressed in terms of the basis of inverse propagators provided{newline()}This is both loaded into the program and printed as a set of B, which can be pasted into the .chpt file for future use")
+                        help=f"determine how any scalar product of loop and external momenta can be expressed in terms of the basis of inverse propagators provided{newline()}This is both loaded into the program and printed as a set of B statements, which can be pasted into the .chpt file for future use")
     parser.add_argument('-g', '--generate-graphs', action='append_const', const='g', dest='actions',
                         help="produce Mathematica code for drawing (very ugly) graphs of the diagrams, for verifying that the topologies have been properly implemented")
     parser.add_argument('-f', '--generate-form', action='append_const', const='f', dest='actions',
                         help="produce FORM code for computing the diagrams")
     parser.add_argument('-F', '--generate-form-main', action='append_const', const='F', dest='actions',
-                        help=f"produce a customizable FORM template program that uses the files generated with --generate-form{newline()}This implies --generate-form and is a separate command to avoid overwriting customizations when regenerating the FORM files.")
+                        help=f"produce a customizable FORM template program that uses the files generated with --generate-form{newline()}This implies --generate-form")
 
     parser.add_argument('-d', '--define', action='append',
-                        help=f"Define FORM preprocessor variables and pass them to FORM.{newline()}Uses the same -d NAME(=VALUE) syntax as FORM.")
+                        help=f"define FORM preprocessor variables and pass them to FORM.{newline()}Uses the same -d NAME(=VALUE) syntax as FORM")
 
     parser.add_argument('-v', '--verbose', action='store_true',
-                        help="Say more about what is being done, including place of origin for all printouts")
+                        help="say more about what is being done, including place of origin for all printouts")
     parser.add_argument('-D', '--debug', action='store_true',
-                        help="Say even more about what is being done; implies --verbose")
+                        help="say even more about what is being done; implies --verbose")
     parser.add_argument('-q', '--quiet', action='store_true',
-                        help="Suppress all output except what is critical.")
+                        help="suppress all output except what is critical.")
 
     parser.add_argument('file', type=str, metavar='FILE', nargs='?', default=None,
-                        help="The main .chpt input file.")
+                        help="the main .chpt input file.")
 
     args = parser.parse_args()
 
@@ -1608,32 +1740,34 @@ def main():
 
     try:
         diagrs = DiagramSet(args.file, options=args.define if args.define else [])
+
+        if args.actions is None:
+            raise ChPTError(f"No action specified (any of -cCgbfF)")
+        for action in args.actions:
+            match action:
+                case 'c':
+                    diagrs.check_CoM()
+                case 'C':
+                    diagrs.check_CoM_FORM()
+                case 'g':
+                    diagrs.draw_graphs()
+                case 'b':
+                    diagrs.determine_prop_basis()
+                case 'f':
+                    diagrs.generate_FORM()
+                case 'F':
+                    diagrs.generate_FORM_main()
+
+        return 0
+
     except FileNotFoundError as err:
-        logger.error(f".chpt file not found: '{args.file}'")
-        return 1
-    except Exception as err:
-        logger.error(str(err))
-        return 1
+        logger.error(f".chpt file not found: '{args.file}'", extra=logextra)
+    except ChPTError as err: # User error
+        logging.error(err, extra=logextra)
+    except Exception: # Debugging error
+        logging.error(traceback.format_exc(), extra=logextra)
 
-    if args.actions is None:
-        logger.error(f"No action specified (any of -cCgbfF)")
-        return 1
-    for action in args.actions:
-        match action:
-            case 'c':
-                diagrs.check_CoM()
-            case 'C':
-                diagrs.check_CoM_FORM()
-            case 'g':
-                diagrs.draw_graphs()
-            case 'b':
-                diagrs.determine_prop_basis()
-            case 'f':
-                diagrs.generate_FORM()
-            case 'F':
-                diagrs.generate_FORM_main()
-
-    return 0
+    return 1
 
 if __name__ == '__main__':
     retval = main()
