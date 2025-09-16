@@ -9,13 +9,100 @@
 
 #define FORMOPTS ""
 #define MAKEOPTS ""
+#define FIELDINFO ""
+#define POWERINFO ""
+
+#ifdef `ORDER'
+*     No elseif since that is not supported by make
+    #if `ORDER'==2
+        #define NORDER "LO"
+    #endif
+    #if `ORDER'==4
+        #define NORDER "NLO"
+    #endif
+    #if `ORDER'==6
+        #define NORDER "NNLO"
+    #endif
+    #if `ORDER'==8
+        #define NORDER "N3LO"
+    #endif
+    #if `ORDER'==10
+        #define NORDER "NkLO"
+    #endif
+
+    #redefine FORMOPTS "-d ORDER=`ORDER'"
+    #redefine MAKEOPTS "ORDER=`ORDER'"
+    #redefine POWERINFO "`NORDER'x"
+#endif
 #ifdef `NM'
-    #ifdef `NV'
-        #ifdef `NP'
-            #define HASINFO "1"
-            #redefine FORMOPTS "-d NM=`NM' -d NV=`NV' -d NP=`NP'"
-            #redefine MAKEOPTS "NM=`NM' NV=`NV' NP=`NP'"
+    #define HASINFO "1"
+    #if `NM'
+        #redefine FIELDINFO "M`NM'"
+    #endif
+
+    #redefine FORMOPTS "`FORMOPTS' -d NM=`NM'"
+    #redefine MAKEOPTS "`MAKEOPTS' NM=`NM'"
+
+    #ifndef `HASVECTOR'
+        #ifdef `NV'
+            #if `NV'
+                #define HASVECTOR
+            #endif
         #endif
+        #ifdef `NA'
+            #if `NA'
+                #define HASVECTOR
+            #endif
+        #endif
+    #endif
+    #ifdef `HASVECTOR'
+        #ifdef `NV'
+            #if `NV'
+                #redefine FIELDINFO "`FIELDINFO'V`NV'"
+            #endif
+        #else
+            #define NV "0"
+        #endif
+        #ifdef `NA'
+            #if `NA'
+                #redefine FIELDINFO "`FIELDINFO'A`NA'"
+            #endif
+        #else
+            #define NA "0"
+        #endif
+        #redefine FORMOPTS "`FORMOPTS' -d HASVECTOR -d NV=`NV' -d NA=`NA'"
+        #redefine MAKEOPTS "`MAKEOPTS' HASVECTOR=1 NV=`NV' NA=`NA'"
+    #endif
+
+    #ifndef `HASSCALAR'
+        #ifdef `NS'
+            #if `NS'
+                #define HASSCALAR
+            #endif
+        #endif
+        #ifdef `NP'
+            #if `NP'
+                #define HASSCALAR
+            #endif
+        #endif
+    #endif
+    #ifdef `HASSCALAR'
+        #ifdef `NS'
+            #if `NS'
+                #redefine FIELDINFO "`FIELDINFO'S`NS'"
+            #endif
+        #else
+            #define NS "0"
+        #endif
+        #ifdef `NP'
+            #if `NP'
+                #redefine FIELDINFO "`FIELDINFO'P`NP'"
+            #endif
+        #else
+            #define NP "0"
+        #endif
+        #redefine FORMOPTS "`FORMOPTS' -d HASSCALAR -d NS=`NS' -d NP=`NP'"
+        #redefine MAKEOPTS "`MAKEOPTS' HASSCALAR=1 NS=`NS' NP=`NA'"
     #endif
 #endif
 
@@ -50,6 +137,11 @@
     #redefine NAMESUFFIX "`NAMESUFFIX'_EXPPAR"
     #redefine MAKEOPTS "`MAKEOPTS' PAR=EXP"
 #endif
+#ifdef `QED'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_QED"
+    #redefine FORMOPTS "`FORMOPTS' -d QED"
+    #redefine MAKEOPTS "`MAKEOPTS' QED=1"
+#endif
 #ifdef `TRF'
     #redefine NAMESUFFIX "`NAMESUFFIX'_TRF"
     #redefine FORMOPTS "`FORMOPTS' -d TRF"
@@ -75,13 +167,12 @@
 #define BBLOCKDIR "`CHPTDIR'/bblocks"
 #define BBLOCKNAME "bb`NAMESUFFIX'"
 
-#ifdef `HASINFO'
-    #define FIELDINFO "M`NM'V`NV'"
-    #define POWERINFO "`FIELDINFO'P`NP'"
 
+#ifdef `HASINFO'
     #define VERTEXDIR "`CHPTDIR'/vertices"
-    #define VERTEXNAME "`POWERINFO'`NAMESUFFIX'"
-    #define VERTEXFILE "`VERTEXDIR'/`VERTEXNAME'.hf"
+    #define SHORTNAME "`POWERINFO'`FIELDINFO'"
+    #define LONGNAME "`SHORTNAME'`NAMESUFFIX'"
+    #define VERTEXFILE "`VERTEXDIR'/`LONGNAME'.hf"
 
     #ifdef `BBLOCK'
         #define BBLOCKFILE "`BBLOCKDIR'/`BBLOCKNAME'/`BBLOCK'`RANK'`FIELDINFO'.hf"
