@@ -1,7 +1,113 @@
 * Header file for bblock-related things
 
+* Define the applicable field counters.
+* This is done in such a way that ChPT_bbexpand.frm and ChPT_lagrexpand.frm
+*  don't have to check for HASVECTOR or HASSCALAR: all macros work in all cases,
+*  with trivial values when they refer to non-included particles.
+* For each particle type X, the total count NX is renamed to NNX
+*  and NX is repurposed as a partial count for subdividing NNX.
+* This simplified recursion, since the partial count becomes the total one
+*  in subordinate calls.
+* Also defined here are complements NXC of the partial count,
+*  various macros for wildcarding and selecting subsets of counts,
+*  and procedures which loop LOOPBODY over all subdivisions of the counts.
+#define SPURIONS "V,A,S,P"
+#define FIELDTYPES "M,`SPURIONS'"
+#do X={`FIELDTYPES'}
+    #ifndef `N`X''
+        #define N`X' "0"
+    #else
+        #define HAS`X'
+    #endif
+    #define NN`X' "`N`X''"
+    #define N`X'C "XXX"
+#enddo
+#define FIELDS "`~NM',`~NV',`~NA',`~NS',`~NP'"
+#define FIELDSCOMPL "`~NMC',`~NVC',`~NAC',`~NSC',`~NPC'"
+#define MESONONLY "`~NM',0,0,0,0"
+#define MESONCOMPL "`~NMC',0,0,0,0"
+#define VECTORONLY "0,`~NV',`~NA',0,0"
+#define VECTORCOMPL "0,`~NVC',`~NAC',0,0"
+#define SCALARONLY "0,0,0,`~NS',`~NP'"
+#define SCALARCOMPL "0,0,0,`~NSC',`~NPC'"
+#define NNVECTOR "{`NNV'+`NNA'}"
+#define NNSCALAR "{`NNS'+`NNP'}"
+#define FIELDSQ "NM?,NV?,NA?,NS?,NP?"
+#define FIELDSV "NM,NV,NA,NS,NP"
+#define DELTA(m,v,a,s,p) "delta_(NM,`~m')*delta_(NV,`~v')*delta_(NA,`~a')*delta_(NS,`~s')*delta_(NP,`~p')"
+
+* Looping procedures expect LOOPBODY to be defined before,
+* using appropriately delayed substitution for the loop variables
+#procedure mesonloop()
+    #do NM=0,`NNM'
+        #define NMC "{`NNM'-`NM'}"
+        `LOOPBODY'
+    #enddo
+#endprocedure
+#procedure vectorloop()
+    #do NV=0,`NNV'
+        #define NVC "{`NNV'-`NV'}"
+        #do NA=0,`NNA'
+            #define NAC "{`NNA'-`NA'}"
+            #define NVECTOR "{`NV'+`NA'}"
+            `LOOPBODY'
+        #enddo
+    #enddo
+#endprocedure
+#procedure scalarloop()
+    #do NS=0,`NNS'
+        #define NSC "{`NNS'-`NS'}"
+        #do NP=0,`NNP'
+            #define NPC "{`NNA'-`NA'}"
+            #define NSCALAR "{`NS'+`NP'}"
+            `LOOPBODY'
+        #enddo
+    #enddo
+#endprocedure
+* Loop over all fields present by nesting the above looping procedures
+#procedure fieldloop()
+*   This beautiful solution fails due to some FORM quirk
+*     #define SCALARLOOPBODY "`~LOOPBODY'"
+*     #ifdef `HASSCALAR'
+*         #define VECTORLOOPBODY "
+*             #call scalarloop()"
+*     #else
+*         #define NSCALAR "0"
+*         #define VECTORLOOPBODY "`~SCALARLOOPBODY'"
+*     #endif
+*     #ifdef `HASVECTOR'
+*         #define MESONLOOPBODY "
+*             #call vectorloop()"
+*     #else
+*         #define NVECTOR "0"
+*         #define MESONLOOPBODY "`~VECTORLOOPBODY'"
+*     #endif
+*     #call mesonloop()
+    #do NM=0,`NNM'
+        #define NMC "{`NNM'-`NM'}"
+        #do NV=0,`NNV'
+            #define NVC "{`NNV'-`NV'}"
+            #do NA=0,`NNA'
+                #define NAC "{`NNA'-`NA'}"
+                #define NVECTOR "{`NV'+`NA'}"
+                #do NS=0,`NNS'
+                    #define NSC "{`NNS'-`NS'}"
+                    #do NP=0,`NNP'
+                        #define NPC "{`NNA'-`NA'}"
+                        #define NSCALAR "{`NS'+`NP'}"
+                        `LOOPBODY'
+                    #enddo
+                #enddo
+            #enddo
+        #enddo
+    #enddo
+#endprocedure
+
 * Standard imports
-#define NEXT "{`NM'+`NV'}"
+#define NEXT "0"
+#do X={`FIELDTYPES'}
+    #redefine NEXT "{`NEXT'+`N`X''}"
+#enddo
 #define NOMANDEL
 #include ChPT_utils.hf
 #include ChPT_defs.hf
@@ -20,8 +126,8 @@
 * Weird rank-1 chip/chim from the p6 lagrangian are chipx/chimx
 #define BBLOCKS0 "u,udag,chi,chidag,chip,U,Udag"
 #define BBLOCKS1 "Gamma,u,U,Udag"
-#define BBLOCKMAXRANK "{`NP'/2}"
-#if `NP' >= 4
+#define BBLOCKMAXRANK "{`ORDER'/2}"
+#if `ORDER' >= 4
     #redefine BBLOCKS0 "`BBLOCKS0',chim"
     #define BBLOCKS2 "fp,fm,FL,FR"
     #ifdef `NF'
@@ -31,7 +137,7 @@
         #endif
     #endif
 #endif
-#if `NP' >= 6
+#if `ORDER' >= 6
     #redefine BBLOCKS1 "`BBLOCKS1',chipx,chimx,chip,chim,chi,chidag"
     #redefine BBLOCKS2 "`BBLOCKS2',h,u"
     #define BBLOCKS3 "FL,FR,fp,fm"
@@ -43,7 +149,7 @@
         #endif
     #endif
 #endif
-#if `NP' >= 8
+#if `ORDER' >= 8
     #redefine BBLOCKS2 "`BBLOCKS2',chi,chidag,chip,chim"
     #redefine BBLOCKS3 "`BBLOCKS3',u,chip,chim"
     #define BBLOCKS4 "FL,FR,fp,fm,chip,chim"
@@ -65,7 +171,28 @@
     #redefine BBLOCKS "`BBLOCKS',`BBLOCKS`RANK''"
 #enddo
 * Building blocks plus building block-like things; basically anything that can come out of the Lagrangian
-#define XBBLOCKS "Phi,Q,v,gL,gR,h,gLdag,gRdag,hdag,`BBLOCKS'"
+#define XBBLOCKS "Phi,gL,gR,h,gLdag,gRdag,hdag,`BBLOCKS'"
+#ifdef `HASVECTOR'
+    #ifdef `QED'
+        #ifdef `HASVECTOR'
+            #if `NA'
+                #message[lagrexpand]~~~ QCD+QED does not support axial vector fields
+                #terminate
+            #endif
+        #endif
+        #ifdef `HASSCALAR'
+            #message[lagrexpand]~~~ QCD+QED does not support (pseudo)scalar fields
+            #terminate
+        #endif
+        #redefine XBBLOCKS "`XBBLOCKS',V,Q,l,r"
+        cfunction A;
+    #else
+        #redefine XBBLOCKS "`XBBLOCKS',V,A,l,r"
+    #endif
+#endif
+#ifdef `HASSCALAR'
+    #redefine XBBLOCKS "`XBBLOCKS',S,P"
+#endif
 
 * Trace manipulation
 #procedure trace()
@@ -102,6 +229,12 @@
     symbol e`MU';* used for parity checking
 #enddo
 
+
+
+#if ((isdefined(HASSCALAR))||(isdefined(PQEMASS))||(isdefined(FULLMASS)))==0
+    #define CHIISSCALAR
+#endif
+
 * Substitution of pre-expanded building blocks,
 * with on-the-fly generation unless NOMAKE is defined,
 * after applying transformations if TRANSFORM is defined
@@ -119,43 +252,40 @@
         #redefine R "{`R'-1}"
     #enddo
 
-    #define NNM "`NM'"
-    #define NNV "`NV'"
-
 *     Apply transformation to objects with well-defined transformation properties before substituting them
 *     The l,r on u(dag) is to indicate which equivalent transformation property to use
     #ifdef `TRANSFORM'
         #if `TRANSFORM'==CHIRAL
-            id u(Nm?,Nv?,r) = gR * u(Nm,Nv) * hdag;
-            id u(Nm?,Nv?,l) = h * u(Nm,Nv) * gLdag;
-            id udag(Nm?,Nv?,r) = h * udag(Nm,Nv) * gRdag;
-            id udag(Nm?,Nv?,l) = gL * udag(Nm,Nv) * hdag;
+            id u(`FIELDSQ',r) = gR * u(`FIELDSV') * hdag;
+            id u(`FIELDSQ',l) = h * u(`FIELDSV') * gLdag;
+            id udag(`FIELDSQ',r) = h * udag(`FIELDSV') * gRdag;
+            id udag(`FIELDSQ',l) = gL * udag(`FIELDSV') * hdag;
 
-            id chi(Nm?,Nv?) = gR * chi(Nm,Nv) * gLdag;
-            id chidag(Nm?,Nv?) = gL * chidag(Nm,Nv) * gRdag;
+            id chi(`FIELDSQ') = gR * chi(`FIELDSV') * gLdag;
+            id chidag(`FIELDSQ') = gL * chidag(`FIELDSV') * gRdag;
 
-            id l(Nm?,Nv?,mu?) = gL * l(Nm,Nv,mu) * gLdag - i_ * gL(mu) * gLdag;
-            id r(Nm?,Nv?,mu?) = gR * r(Nm,Nv,mu) * gRdag - i_ * gR(mu) * gRdag;
+            id l(`FIELDSQ',mu?) = gL * l(`FIELDSV',mu) * gLdag - i_ * gL(mu) * gLdag;
+            id r(`FIELDSQ',mu?) = gR * r(`FIELDSV',mu) * gRdag - i_ * gR(mu) * gRdag;
         #elseif `TRANSFORM'==P
-            id u(Nm?,Nv?,r?{r,l}) = udag(Nm,Nv);
-            al udag(Nm?,Nv?,r?{r,l}) = u(Nm,Nv);
+            id u(`FIELDSQ',r?{r,l}) = udag(`FIELDSV');
+            al udag(`FIELDSQ',r?{r,l}) = u(`FIELDSV');
 
-            id chi(Nm?,Nv?) = chidag(Nm,Nv);
-            al chidag(Nm?,Nv?) = chi(Nm,Nv);
+            id chi(`FIELDSQ') = chidag(`FIELDSV');
+            al chidag(`FIELDSQ') = chi(`FIELDSV');
 
-            id l(Nm?,Nv?,mu?) = r(Nm,Nv,mu);
-            al r(Nm?,Nv?,mu?) = l(Nm,Nv,mu);
+            id l(`FIELDSQ',mu?) = r(`FIELDSV',mu);
+            al r(`FIELDSQ',mu?) = l(`FIELDSV',mu);
         #elseif `TRANSFORM'==C
-            id bb?{u,udag}(Nm?,Nv?,r?{r,l}) = bb(Nm,Nv);
+            id bb?{u,udag}(`FIELDSQ',r?{r,l}) = bb(`FIELDSV');
 
 *             chi(dag) unchanged
 
-            id l(Nm?,Nv?,mu?) = -r(Nm,Nv,mu);
-            al r(Nm?,Nv?,mu?) = -l(Nm,Nv,mu);
+            id l(`FIELDSQ',mu?) = -r(`FIELDSV',mu);
+            al r(`FIELDSQ',mu?) = -l(`FIELDSV',mu);
         #endif
     #else
 *         This is just stripping away transformation information
-        id bb?{u,udag}(Nm?,Nv?,r?{r,l}) = bb(Nm,Nv);
+        id bb?{u,udag}(`FIELDSQ',r?{r,l}) = bb(`FIELDSV');
     #endif
 
 *     Enact substitution, assuming first arguments are the desired powers of the fields
@@ -163,45 +293,50 @@
 *     Current implementation is for the simple mesonic + QED ChPT.
     #if ((`BBLOCK'==chi)||(`BBLOCK'==chidag))
         #ifndef `DRYRUN'
-*             chi is a constant
-            id bb?{chi,chidag}(Nm?,Nv?,?derivs) = chi * delta_(Nm,0) * delta_(Nv,0) * delta_(nargs_(?derivs),0);
-        #endif
-    #elseif ((`BBLOCK'==chitil)||(`BBLOCK'==chitildag))
-        #ifndef `DRYRUN'
-*             chi-tilde simplifies to chi^(Nf-1) in the equal-mass case
-            id bb?{chitil,chitildag}(Nm?,Nv?,?derivs) =
-                #if (isdefined(PKEMASS)==0)&&(isdefined(FULLMASS)==0)&&(isdefined(NFGENERAL)==0)
-                    chi^{`NF'-1}
-                #else
-                    chitil
-                #endif
-                * delta_(Nm,0) * delta_(Nv,0) * delta_(nargs_(?derivs),0);
+            #ifdef `HASSCALAR'
+                id chi(`FIELDSQ',?derivs)
+                    =      2*B*S(?derivs) * `DELTA(0,0,0,1,0)'
+                    + i_ * 2*B*P(?derivs) * `DELTA(0,0,0,0,1)';
+                id chidag(`FIELDSQ',?derivs)
+                    =      2*B*S(?derivs) * `DELTA(0,0,0,1,0)'
+                    - i_ * 2*B*P(?derivs) * `DELTA(0,0,0,0,1)';
+            #else
+*                chi is a constant
+                id bb?{chi,chidag}(`FIELDSQ',?derivs) = chi * `DELTA(0,0,0,0,0)' * delta_(nargs_(?derivs),0);
+            #endif
         #endif
     #elseif (`BBLOCK'==lr)&&(`RANK'==1)
         #ifndef `DRYRUN'
-            id l?{l,r}(Nm?,Nv?,mu?) = v(mu) * delta_(Nm,0) * delta_(Nv,1);
+            #ifdef `HASVECTOR'
+                id l(`FIELDSQ',mu?)
+                    = V(mu) * `DELTA(0,1,0,0,0)'
+                    - A(mu) * `DELTA(0,0,1,0,0)';
+                id r(`FIELDSQ',mu?)
+                    = V(mu) * `DELTA(0,1,0,0,0)'
+                    + A(mu) * `DELTA(0,0,1,0,0)';
+            #endif
         #endif
     #else
-        #do NM=0,`NNM'
-            #do NV=0,`NNV'
-                #include- names.hf
-                #ifndef `NOMAKE'
-                    #system `MAKECMD' BBLOCK=`BBLOCK' RANK=`RANK' `BBLOCKFILE'
-                #endif
-                #ifndef `DRYRUN'
-                    #message[substitute]~~~ substituting `BBLOCK'(`NM',`NV'`INDICES')
-                    id `BBLOCK'(`NM',`NV'`INDICES') =
-                        #include- `BBLOCKFILE'
-                        ;
-                #endif
-            #enddo
-        #enddo
+        #define LOOPBODY "
+            #include- names.hf
+            #if isdefined(NOMAKE)==0
+                #system `~MAKECMD' BBLOCK=`~BBLOCK' RANK=`~RANK' `~BBLOCKFILE'
+            #endif
+            #if isdefined(DRYRUN)
+                #message[substitute]~~~ DRYRUN: not importing `~BBLOCK'(`~FIELDS'`~INDICES')
+            #else
+                #message[substitute]~~~ substituting `~BBLOCK'(`~FIELDS'`~INDICES')
+                id `~BBLOCK'(`~FIELDS'`~INDICES') =
+                    #include- `~BBLOCKFILE'
+                    ;
+            #endif"
+        #call fieldloop()
     #endif
-#endprocedure
+#endprocedured
 
 cfunction trPhi;
 functions tr,trL,trR, dL,dR;
-functions bb, Phi,l,r,chi,chidag,v,`BBLOCKS';
+functions bb, l,r, `XBBLOCKS';
 functions h,gL,gR, hdag,gLdag,gRdag;
 function ipart;
-symbols Nm,Nv;
+symbols `FIELDSV';

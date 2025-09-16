@@ -1,6 +1,7 @@
 legacy/*
 xformx*
 *.log
+*.mk
 bblocks/*
 !bblocks/rhs.sh
 vertices/*

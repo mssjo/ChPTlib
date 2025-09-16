@@ -1,5 +1,5 @@
-#ifndef `CHPTDIAGRAMVERTEXHF'
-#define CHPTDIAGRAMVERTEXHF
+#ifndef `CHPTVERTEXHF'
+#define CHPTVERTEXHF
 
 * Procedures related to specifying vertices
 
@@ -16,31 +16,25 @@
     id derivs(q?) = 1;
 #endprocedure
 
-* Backward compatibility with older generated code
-#procedure barevertex(ID,NM,NV,NP)
-    #message[vertex]~~~ WARNING: barevertex is deprecated; use makevertex instead
-    #call makevertex(`ID',`NM',`NV',`NP')
-#endprocedure
+#procedure makevertex(ID,ORD,NM,NV,NA,NS,NP)
 
-#procedure makevertex(ID,NM,NV,NP)
+    #if `ORD'==LO
+        #define ORD "2"
+    #elseif `ORD'==NLO
+        #define ORD "4"
+    #elseif `ORD'==NNLO || `ORD'==N2LO
+        #define ORD "6"
+    #elseif `ORD'==NNNLO || `ORD'==N3LO
+        #define ORD "8"
+    #endif
 
-    #if `ORDER' < `NP'
+    #if `ORDER' < `ORD'
 *         Ignore vertices of too high order
-        #message[makevertex]~~~ vertex `ID' omitted: NP=`NP' higher than ORDER=`ORDER'
+        #message[makevertex]~~~ vertex `ID' omitted: requested order `ORD' higher than ORDER=`ORDER'
         local vert`ID' = 0;
         .sort:>>barevertex: `ID'<<;
     #else
         .sort
-
-        #if `NP'==LO
-            #define NP "2"
-        #elseif `NP'==NLO
-            #define NP "4"
-        #elseif `NP'==NNLO || `NP'==N2LO
-            #define NP "6"
-        #elseif `NP'==NNNLO || `NP'==N3LO
-            #define NP "8"
-        #endif
 
         #define NX "{`NM'+`NV'}"
 
@@ -52,15 +46,25 @@
             #redefine EXTENDFLAV "`NM'"
         #endif
 
-        indices <i`ID'1>,...,<i`ID'`NX'>;
-        indices <f`ID'1>,...,<f`ID'`NM'>;
-        set f`ID'x: <f`ID'1>,...,<f`ID'`NM'>;
+        indices <i`ID'x1>,...,<i`ID'x`NX'>;
+        indices <f`ID'x1>,...,<f`ID'x`NM'>;
+        set f`ID'x: <f`ID'x1>,...,<f`ID'x`NM'>;
 
-        indices <mu`ID'1>,...,<mu`ID'`NP'>;
-        set mu`ID'x: <mu`ID'1>,...,<mu`ID'`NP'>;
+        indices <mu`ID'x1>,...,<mu`ID'x`ORD'>;
+        set mu`ID'x: <mu`ID'x1>,...,<mu`ID'x`ORD'>;
 
-        vectors <p`ID'1>,...,<p`ID'`NX'>;
-        set p`ID'x: <p`ID'1>,...,<p`ID'`NX'>;
+        vectors <p`ID'x1>,...,<p`ID'x`NX'>;
+        set p`ID'x: <p`ID'x1>,...,<p`ID'x`NX'>;
+
+        #define ORDER "`ORD'"
+        #if {`NV'+`NA'}
+            #define HASVECTOR
+            cfunctions V,A;
+        #endif
+        #if {`NS'+`NP'}
+            #define HASSCALAR
+            cfunctions S,P;
+        #endif
 
         skip;
 
@@ -68,17 +72,21 @@
 
         local vert`ID' =
             #ifdef `SQED'
-                #call SQEDvertex(`ID',`NM',`NV',`NP')
+                #if `NA'||`NS'||`NP'
+                    0;
+                #else
+                    #call SQEDvertex(`ID',`ORD',`NM',`NV')
+                #endif
             #else
-                #system cd `VERTEXDIR'/.. && pwd && echo "`MAKECMD' `VERTEXFILE'" && `MAKECMD' `VERTEXFILE'
+                #system cd `VERTEXDIR'/.. && `MAKECMD' `VERTEXFILE'
                 #message[makevertex]~~~ importing `VERTEXFILE'
                 #include- `VERTEXFILE'
                 ;
             #endif
 
-        multiply replace_(<lorentz[1],mu`ID'x[1]>,...,<lorentz[`NP'],mu`ID'x[`NP']>);
-        #if `NM'>0
-            multiply replace_(<f1,f`ID'1>,...,<f`NM',f`ID'`NM'>);
+        multiply replace_(<lorentz[1],mu`ID'x[1]>,...,<lorentz[`ORD'],mu`ID'x[`ORD']>);
+        #if `NM'
+            multiply replace_(<f1,f`ID'x1>,...,<f`NM',f`ID'x`NM'>);
         #endif
 
         bracket Tr;
@@ -88,17 +96,28 @@
 
 #endprocedure
 
-#procedure SQEDvertex(ID,NM,NV,NP)
+#procedure SQEDvertex(ID,ORD,NM,NV)
+
+    #if `ORD'==LO
+        #define ORD "2"
+    #elseif `ORD'==NLO
+        #define ORD "4"
+    #elseif `ORD'==NNLO || `ORD'==N2LO
+        #define ORD "6"
+    #elseif `ORD'==NNNLO || `ORD'==N3LO
+        #define ORD "8"
+    #endif
+
     #if (`NM'==2) && (`NV'==2)
-        e^2 * A(mu`ID'1)*A(mu`ID'1) * phi(f`ID'1)*phi(f`ID'2) * delEE(`NP')
+        e^2 * A(mu`ID'1)*A(mu`ID'1) * phi(f`ID'1)*phi(f`ID'2) * delEE(`ORD')
     #elseif (`NM'==2) && (`NV'==1)
-        -i_*e * (phi(f`ID'1, mu`ID'1)*phi(f`ID'2) - phi(f`ID'1)*phi(f`ID'2, mu`ID'1)) * A(mu`ID'1)  * delE(`NP')
+        -i_*e * (phi(f`ID'1, mu`ID'1)*phi(f`ID'2) - phi(f`ID'1)*phi(f`ID'2, mu`ID'1)) * A(mu`ID'1)  * delE(`ORD')
     #elseif (`NM'==4) && (`NV'==0)
-        -i_*lambda/fac_(4) * <phi(f`ID'1)>*...*<phi(f`ID'4)> * delL(`NP')
+        -i_*lambda/fac_(4) * <phi(f`ID'1)>*...*<phi(f`ID'4)> * delL(`ORD')
     #elseif (`NM'==2) && (`NV'==0)
-        i_*(phi(f`ID'1,mu`ID'1)*phi(f`ID'2,mu`ID'1) * delZ(`NP') - phi(f`ID'1)*phi(f`ID'2) * delM(`NP'))
+        i_*(phi(f`ID'1,mu`ID'1)*phi(f`ID'2,mu`ID'1) * delZ(`ORD') - phi(f`ID'1)*phi(f`ID'2) * delM(`ORD'))
     #elseif (`NM'==0) && (`NV'==2)
-        -i_*(A(mu`ID'1,mu`ID'2)*A(mu`ID'1,mu`ID'2) - A(mu`ID'1,mu`ID'2)*A(mu`ID'2,mu`ID'1)) * delA(`NP')
+        -i_*(A(mu`ID'1,mu`ID'2)*A(mu`ID'1,mu`ID'2) - A(mu`ID'1,mu`ID'2)*A(mu`ID'2,mu`ID'1)) * delA(`ORD')
     #else
         0
     #endif

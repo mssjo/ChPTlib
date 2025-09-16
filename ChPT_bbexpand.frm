@@ -5,9 +5,14 @@
 
 #setexternalattr stderr=terminal
 
+
+#define CONST "dR,trL,trR"
+#ifndef `HASSCALAR'
+    #redefine CONST "`CONST',chi,chidag"
+#endif
+
 * Apply derivatives
 #procedure deriv(MU)
-    #define CONST "dR,trL,trR,chi,chidag"
     #call untrace
     repeat;
         id dL(`MU') * bb?!{`CONST'}(?lz) = bb(?lz) * dL(`MU') + bb(`MU',?lz);
@@ -19,7 +24,7 @@
 #endprocedure
 
 * Apply covariant derivative to building block BBLOCK with RANK Lorentz indices
-* and transformation proerties given by X,Y:
+* and transformation properties given by X,Y:
 * either some combination of l,r for B -> gX B gYdag (D derivative) or h,h for B -> h B hdag (nabla derivative)
 #procedure covar(BBLOCK,RANK,X,Y)
 
@@ -35,45 +40,56 @@
     #enddo
 
     #if (`X'==h)&&(`Y'==h)
-        dL(mu) * `BBLOCK'(`NM',`NV'`INDICES') * dR(mu)
-            #do Nm=0,`NM'
-                #do Nv=0,`NV'
-                    + Gamma(`Nm',`Nv', mu) * `BBLOCK'({`NM'-`Nm'},{`NV'-`Nv'}`INDICES')
-                    - `BBLOCK'({`NM'-`Nm'},{`NV'-`Nv'}`INDICES') * Gamma(`Nm',`Nv', mu)
-                #enddo
-            #enddo
+        dL(mu) * `BBLOCK'(`FIELDS'`INDICES') * dR(mu)
+            #define LOOPBODY "
+                #if `~NSCALAR'
+                #else
+                    + Gamma(`~FIELDS', mu) * `BBLOCK'(`~FIELDSCOMPL'`INDICES')
+                    - `BBLOCK'(`~FIELDSCOMPL'`INDICES') * Gamma(`~FIELDS', mu)
+                #endif"
+            #call fieldloop()
             ;
+
         #call substitute(`BBLOCK',`RANK')
         #call substitute(Gamma,1)
         #call deriv(mu)
     #else
-        dL(mu) * `BBLOCK'(`NM',`NV'`INDICES') * dR(mu)
-            #do Nm=0,`NV'
-                - i_ * `X'(0,`Nm', mu) * `BBLOCK'(`NM',{`NV'-`Nm'}`INDICES')
-                + i_ * `BBLOCK'(`NM',{`NV'-`Nm'}`INDICES') * `Y'(0,`Nm', mu)
-            #enddo
+        dL(mu) * `BBLOCK'(`FIELDS'`INDICES') * dR(mu)
+            #define LOOPBODY "
+                #if (`~NM')||(`~NSCALAR')
+                #else
+                    - i_ * `X'(`~FIELDS', mu) * `BBLOCK'(`~FIELDSCOMPL'`INDICES')
+                    + i_ * `BBLOCK'(`~FIELDSCOMPL'`INDICES') * `Y'(`~FIELDS', mu)
+                #endif"
+            #call fieldloop()
             ;
 
-        #if (`BBLOCK'==chi)||(`BBLOCK'==chidag)
-            #call substitute`BBLOCK'
-        #else
-            #call substitute(`BBLOCK',`RANK')
-        #endif
+        #call substitute(`BBLOCK',`RANK')
         #call substitute(lr,1)
         #call deriv(mu)
     #endif
 #endprocedure
 
 #procedure expanduGamma(PM)
-    (
-        #do Nx=0,`NM'
-*             NOTE: we can't separate the NV=0 and NV=1 contributions since they mix under chiral transformations
-            +    udag(`Nx',0,r) * (dL(mu) * u({`NM'-`Nx'},0,r) * dR(mu))
-            `PM' u(`Nx',0,l) * (dL(mu) * udag({`NM'-`Nx'},0,l) * dR(mu))
-            +    udag(`Nx',0,r) * ( -i_ * r(0,1, mu) * u({`NM'-`Nx'},0,r))
-            `PM' u(`Nx',0,l) * ( -i_ * l(0,1, mu) * udag({`NM'-`Nx'},0,l))
-        #enddo
-        );
+    #show NNM
+    #if `NNSCALAR'
+        0
+    #else
+        #define LOOPBODY "
+            #if `NNVECTOR'==0
+                +    udag(`~MESONONLY',r) * (dL(mu) * u   (`~MESONCOMPL',r) * dR(mu))
+                `PM' u   (`~MESONONLY',l) * (dL(mu) * udag(`~MESONCOMPL',l) * dR(mu))
+            #elseif `NNVECTOR'==1
+                +    udag(`~MESONONLY',r) * ( -i_ * r(`~VECTORONLY', mu) * u   (`~MESONCOMPL',r))
+                `PM' u   (`~MESONONLY',l) * ( -i_ * l(`~VECTORONLY', mu) * udag(`~MESONCOMPL',l))
+            #else
+                + 0
+            #endif"
+        (
+        #call mesonloop()
+        )
+    #endif
+    ;
 
     #call substitute(lr,1)
     #call substitute(u,0)
@@ -84,28 +100,30 @@
 #procedure expandNGmatrix(PM)
 * This handles the expansion of the Nambu-Goldstone matrix, which involves almost
 * all dependence on PAR
-    #if `PAR'==SQRT
+    #if {`NNSCALAR'+`NNVECTOR'}
+        0;
+    #elseif `PAR'==SQRT
 *         The parametrization U = i_ Phi + sqrt(1 - Phi^2) (omitting normalization)
-        #if (`NM'==1)
+        #if (`NNM'==1)
             i_ * `PM'Phi/(sqrt2*F);
-        #elseif ({`NM'%2}!=0)
+        #elseif ({`NNM'%2}!=0)
             0;
         #else
-            (trPhi(2)/(4*F^2))^{`NM'/2} * coeff({`NM'/2});
+            (trPhi(2)/(4*F^2))^{`NNM'/2} * coeff({`NNM'/2});
             id coeff(n?) = -binom_(2*n,n) / ( 2^(2*n) * (2*n-1) );
 
             id trPhi(2) = tr(Phi,Phi);
         #endif
     #elseif `PAR'==GEN
 *         The general parametrization is a bit special, since the field redefenition
-*         causes mixing between different NM. We use partitions to help.
+*         causes mixing between different NNM. We use partitions to help.
 
-*         Rather than expanding exp(Phi) (omitting normalization) up to order NM
+*         Rather than expanding exp(Phi) (omitting normalization) up to order NNM
 *          and then expanding the Phi's again, which would lead to lots of discarded terms,
-*          list all ways of getting NM from up to NM Phi's, each expanded to just the
+*          list all ways of getting NNM from up to NNM Phi's, each expanded to just the
 *          necessary order.
-        #if `NM'>0
-            #external ipart --form --odd --multiplicity `NM'
+        #if `NNM'>0
+            #external ipart --form --odd --multiplicity `NNM'
             #fromexternal+
                 ;
         #else
@@ -119,42 +137,42 @@
 
     #else
 *         All other parametrizations are given in terms of Taylor series
-        (`PM'i_*Phi/(sqrt2*F))^`NM'
-        #if `NM'>=2
+        (`PM'i_*Phi/(sqrt2*F))^`NNM'
+        #if `NNM'>=2
             #switch `PAR'
                 #case EXP
 *                     Exponential parametrization
-                    * invfac_(`NM');
+                    * invfac_(`NNM');
                     #break
                 #case CAY
 *                     Cayley parametrization
-                    / 2^{`NM'-1};
+                    / 2^{`NNM'-1};
                     #break
                 #case MIN
 *                     Minimal parametrization
-                    #if {`NM'%2}
+                    #if {`NNM'%2}
                         * 0;
                     #else
-                        * sign_({`NM'/2+1}) * / 2^{`NM'-2} * binom_({`NM'-2}, {`NM'/2-1})/`NM';
+                        * sign_({`NNM'/2+1}) * / 2^{`NNM'-2} * binom_({`NNM'-2}, {`NNM'/2-1})/`NNM';
                     #endif
                     #break
                 #case BIJ
 *                     That parametrization Hans Bijnens used that one time
-                    #if `NM'==2
+                    #if `NNM'==2
                         / 2;
-                    #elseif `NM'==3
+                    #elseif `NNM'==3
                         / 8;
                     #else
-                        #switch {`NM'%4}
+                        #switch {`NNM'%4}
                             #case 0
                             #case 2
                                 * 0;
                                 #break
                             #case 1
-                                * -fac_({(`NM'-1)/2-2}) * invfac_({(`NM'-1)/4-1}) / 2^{7*((`NM'-1)/4) - 1};
+                                * -fac_({(`NNM'-1)/2-2}) * invfac_({(`NNM'-1)/4-1}) / 2^{7*((`NNM'-1)/4) - 1};
                                 #break
                             #case 3
-                                * +fac_({(`NM'+1)/4-2}) / 2^{5*((`NM'+1)/4)-1};
+                                * +fac_({(`NNM'+1)/4-2}) / 2^{5*((`NNM'+1)/4)-1};
                         #endswitch
                     #endif
                     #break
@@ -170,7 +188,7 @@
 
 
 * Obtain the building block from its definition, taking some switchy shortcuts to avoid code duplication.
-* Most definitions are simply defined in terms of other building blocks, and these are loaded to
+* Most building blocks are simply defined in terms of other building blocks, and these are loaded to
 * exactly the right orders in the fields to smoothen the process.
 #define PM "+"
 #define pm "p"
@@ -186,9 +204,9 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
                 #message[bbexpand]~~~ ERROR: nontrivial Phi-expansion without PAR=GEN
                 #terminate
             #endif
-            #if `NM'==0
+            #if `NNM'==0
                 1;
-            #elseif {`NM'%2}==0
+            #elseif {`NNM'%2}==0
                 0;
             #else
                 #if `RANK' != 0
@@ -198,7 +216,7 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
 
 *                 This implements footnote 11 in Bijnens, Husek & Sjo (2021)
 *                 which is of course the best footnote ever
-                #external ipart --form --ordered {`NM'-1}
+                #external ipart --form --ordered {`NNM'-1}
                 #fromexternal+
                     ;
 *                 Prepend 1 + (number of 1's) to the partition, remove 1's
@@ -228,14 +246,19 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #redefine rl "l"
 *           INTENTIONAL FALL-THROUGH
         #case U
-            #if `RANK' == 0
-                #do Nm=0,`NM'
-                    #do Nv=0,`NV'
-                        + u`dag'(`Nm',`Nv') * u`dag'({`NM'-`Nm'},{`NV'-`Nv'})
-                    #enddo
-                #enddo
-                ;
-                #call substitute(u`dag',0)
+            #if `NNSCALAR'
+                0
+            #elseif `RANK' == 0
+                #if `NNVECTOR'
+                    0
+                #else
+                    #define LOOPBODY "
+                        + u`dag'(`~MESONONLY') * u`dag'(`~MESONCOMPL')"
+                    #call fieldloop()
+                    ;
+
+                    #call substitute(u`dag',0)
+                #endif
             #else
                 #call covar(U`dag',{`RANK'-1},`rl',`lr')
             #endif
@@ -246,7 +269,9 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
 *           INTENTIONAL FALL-THROUGH
         #case u
 *             The basic chiral field u
-            #if `RANK' == 0
+            #if `NNSCALAR'
+                0
+            #elseif `RANK' == 0
                 #call expandNGmatrix(`PM')
             #elseif `RANK'>1
                 #call covar(u,{`RANK'-1},h,h)
@@ -269,19 +294,20 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #if `RANK'>0
                 #call covar(`BBLOCK',{`RANK'-1},h,h)
             #else
-                #if `NV'>0
+                #if `NNVECTOR'
                     0
                 #else
-                    #do Nm=0,`NM'
-                        +    udag(`Nm',0,r) * chi(0,0)    * udag({`NM'-`Nm'},0,l)
-                        `PM' u   (`Nm',0,l) * chidag(0,0) * u   ({`NM'-`Nm'},0,r)
-                    #enddo
+                    #define LOOPBODY "
+                        +    udag(`~MESONONLY',r) * chi   (`SCALARONLY') * udag(`~MESONCOMPL',l)
+                        `PM' u   (`~MESONONLY',l) * chidag(`SCALARONLY') * u   (`~MESONCOMPL',r)"
+                    #call mesonloop()
+                    ;
+
+                    #call substitute(u,0)
+                    #call substitute(udag,0)
+                    #call substitute(chi,0)
+                    #call substitute(chidag,0)
                 #endif
-                ;
-                #call substitute(u,0)
-                #call substitute(udag,0)
-                #call substitute(chi,0)
-                #call substitute(chidag,0)
             #endif
             #break
 
@@ -292,10 +318,10 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #if `RANK'>2
                 #call covar(`BBLOCK',{`RANK'-1},h,h)
             #else
-                #do Nx=0,`NM'
-                    +    u(`Nx',0,l) * FL(0,`NV', mu,nu) * udag({`NM'-`Nx'},0,l)
-                    `PM' udag(`Nx',0,r) * FR(0,`NV', mu,nu) * u({`NM'-`Nx'},0,r)
-                #enddo
+                #define LOOPBODY "
+                    +    u   (`~MESONONLY',l) * FL(`VECTORONLY', mu,nu) * udag(`~MESONCOMPL',l)
+                    `PM' udag(`~MESONONLY',r) * FR(`VECTORONLY', mu,nu) * u   (`~MESONCOMPL',r)"
+                #call mesonloop()
                 ;
                 #call substitute(u,0)
                 #call substitute(udag,0)
@@ -311,11 +337,19 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #if `RANK'>2
                 #call covar(`BBLOCK',{`RANK'-1},`lr',`lr')
             #else
-                #if `NM'!=0
+                #if (`NNM')||(`NNSCALAR')
                     0
+                #elseif `NNVECTOR'==1
+                    dL(mu)*`lr'(`VECTORONLY',nu)*dR(mu) - dL(nu)*`lr'(`VECTORONLY',mu)*dR(nu)
+                #elseif `NNVECTOR'==2
+                    - i_ * (
+                        #define LOOPBODY "
+                            + `lr'(`~VECTORONLY',mu)*`lr'(`~VECTORCOMPL',nu)
+                            - `lr'(`~VECTORONLY',nu)*`lr'(`~VECTORCOMPL',mu)"
+                        #call fieldloop()
+                        )
                 #else
-                    dL(mu)*`lr'(0,1,nu)*dR(mu) - dL(nu)*`lr'(0,1,mu)*dR(nu)
-                    - i_ * (`lr'(0,1,mu)*`lr'(0,1,nu) - `lr'(0,1,nu)*`lr'(0,1,mu))
+                    0
                 #endif
                 ;
                 #call substitute(lr,1)
@@ -326,7 +360,11 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
 
 *         These only appear in the p6 lagrangian, no derivatives needed
         #case h
-            u(`NM',`NV',mu,nu) + u(`NM',`NV',nu,mu);
+            #if `NNSCALAR'
+                0;
+            #else
+                u(`FIELDS',mu,nu) + u(`FIELDS',nu,mu);
+            #endif
 
             #call substitute(u,2)
             #break
@@ -335,13 +373,11 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #redefine mp "p"
 *             INTENTIONAL FALL-THROUGH
         #case chipx
-            chi`pm'(`NM',`NV',mu) - i_/2 * (
-                #do Nm=0,`NM'
-                    #do Nm=0,`NV'
-                        + chi`mp'(`Nm',`Nm')*u({`NM'-`Nm'},{`NV'-`Nm'},mu)
-                        + u({`NM'-`Nm'},{`NV'-`Nm'},mu)*chi`mp'(`Nm',`Nm')
-                    #enddo
-                #enddo
+            chi`pm'(`FIELDS',mu) - i_/2 * (
+                #define LOOPBODY "
+                    + chi`mp'(`~FIELDS')*u(`~FIELDSCOMPL',mu)
+                    + u(`~FIELDS',mu)*chi`mp'(`~FIELDSCOMPL')"
+                #call fieldloop
                 );
 
             #call substitute(chi`pm',1)
@@ -349,14 +385,32 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #call substitute(u,1)
             #break
 
+*         chitil = (det(chi)/chi)^-1, used in some contact terms
+        #case chitildag
+            #redefine rl "l"
+            #redefine lr "r"
+            #redefine dag "dag"
+*             INTENTIONAL FALL-THROUGH
+        #case chitil
+            #if `RANK'>0
+                #call covar(`BBLOCK',{`RANK'-1},`rl',`lr')
+            #elseif (`NNM')||(`NNVECTOR')
+                0;
+            #else
+                #ifdef `CHIISSCALAR'
+*                     chitilde simplifies to chi^(Nf-1) when it is scalar
+                    (chi`dag'(`SCALARONLY'))^{`NF'-1};
+                    #call substitute(chi`dag',0)
+                #else
+*                     otherwise, it is a primitive object
+                    `BBLOCK'(`SCALARONLY');
+                #endif
+            #endif
+            #break
+
         #default
-*             #ifdef `STRICT'
-                #message[bbexpand]~~~ ERROR: unknown building block "`BBLOCK'"
-                #terminate
-*             #else
-*                 #message[bbexpand]~~~ WARNING: definition of "`BBLOCK'" not known, setting to zero
-*                 0;
-*             #endif
+            #message[bbexpand]~~~ ERROR: unknown building block "`BBLOCK'"
+            #terminate
     #endswitch
     ;
 
@@ -364,13 +418,23 @@ id 1/sqrt2 = sqrt2/2;
 id sqrt2^2 = 2;
 
 .sort
-symbols Mtag,Vtag;
+symbols
+    #do X={`FIELDTYPES'}
+        #ifdef `HAS`X''
+            ,`X'tag
+        #endif
+    #enddo
+    ;
 
 #call untrace
 
 * Count number of fields
 id Phi(?lz) = Phi(?lz) * Mtag;
-id v(?lz) = v(?lz) * Vtag;
+#do X={`SPURIONS'}
+    #ifdef `HAS`X''
+        id `X'(?lz) = `X'(?lz) * `X'tag;
+    #endif
+#enddo
 
 #ifdef `TRANSFORM'
     #if `TRANSFORM'==CHIRAL
@@ -397,14 +461,29 @@ id v(?lz) = v(?lz) * Vtag;
 * NOTE: most building blocks get generated to exactly the right order, but u, Gamma, FL and FR
 * get mixed powers of l,r and therefore require this step.
 * It's also good as a sanity check.
-if((count(Mtag,1)!=`NM')||(count(Vtag,1)!=`NV'));
-    print "[bbexpand] WARNING: inexact term detected (NM=`NM', NV=`NV'):";
+if(0
+    #do X={`FIELDTYPES'}
+        #ifdef `HAS`X''
+            ||(count(`X'tag,1)!=`N`X'')
+        #endif
+    #enddo
+    );
+    print "[bbexpand] ERROR: inexact term detected:";
+    #do X={`FIELDTYPES'}
+        #ifdef `HAs`X''
+            print "[bbexpand]   (N`X'=`N`X'')";
+        #endif
+    #enddo
     print "    %t";
-    discard;
+    exit "[bbexpand] Terminating due to inexact term.";
+*     discard;
 endif;
 
-id Mtag = 1;
-id Vtag = 1;
+#do X={`FIELDTYPES'}
+    #ifdef `HAS`X''
+        id `X'tag = 1;
+    #endif
+#enddo
 
 print +s;
 .sort
