@@ -129,6 +129,9 @@ class Diagram:
         vertex.ingoing_momenta = []
 
     def add_edge(self, edge):
+        # Edge constructor performs bounds checks but imports can circumvent them
+        if edge.source >= len(self.vertices) or edge.destination >= len(self.vertices):
+            raise ChPTError(f"Importing edge {edge} into {len(self.vertices)}-vertex diagram")
         self.edges.append(edge)
         logger.debug(f"Added edge {edge}", extra=logextra)
 
@@ -545,21 +548,26 @@ class Diagram:
         return {p for vert in self.vertices for p in vert.legs.keys()}
 
 def specify_legs(token, legs):
-    if token.isnumeric():
-        if 'M' in legs:
-            raise ChPTError("Number of meson legs already specified")
-        legs['M'] = int(token)
+    try:
+        if token.isnumeric():
+            particle = 'M'
+            number = int(token)
+        elif token[0].isnumeric():
+            particle = token[-1]
+            number = int(token[:-1])
+        elif token in PARTICLES:
+            particle = token
+            number = 1
+        else:
+            return False
+    except ValueError as err:
+        raise ChPTError(f"Failed to read number of {PARTICLES[particle]}s: {err}")
 
-    elif token[0].isnumeric():
-        particle = token[-1]
-        if particle not in PARTICLES:
-            raise ChPTError(f"Invalid particle type: {particle}")
-        if particle in legs:
-            raise ChPTError(f"Number of {PARTICLES[particle]} legs already specified")
-        legs[particle] = int(token[:-1])
-
-    else:
-        return False
+    if particle not in PARTICLES:
+        raise ChPTError(f"Invalid particle type: {particle}")
+    if particle in legs:
+        raise ChPTError(f"Number of {PARTICLES[particle]} legs already specified")
+    legs[particle] = number
 
     return True
 
@@ -1174,7 +1182,7 @@ class DiagramSet:
                     raise ChPTError(f"Unknown statement '{tokens[0]}'")
 
         except IndexError:
-            raise ChPTError("Missing compulsory argument" + indent(f"at {where}{newline(1)}{line}", ' '*4))
+            raise ChPTError("Missing compulsory argument\n" + indent(f"at {where}{newline(1)}{line}", ' '*4))
 
         except (ChPTError, FileNotFoundError) as err:
             errstr = str(err)
@@ -1664,7 +1672,7 @@ def print_chpt_help():
           "The statement types are the following:",
           wrap('I').fill("Input the contents of other .chpt files given as arguments."),
           wrap('N').fill("Name the diagram set according to the single argument. If no N-statement is given, the set is named after the .chpt file. The name should only consist of letters (no numbers, underscores, etc.) in order to be compatible with both FORM and Mathematica variable name formats."),
-          wrap('X').fill(f"Specify the number of external legs (all diagrams have the same). Each argument is a number followed by a character specifying the type of particle. The particle types are {and_join([f'{p}({n[1:]})' for p,n in PARTICLES.items()])}. The particle specifier defaults to M(eson) if omitted. The number of each type of particle may be specified only once, and defaults to zero. External legs are assigned incoming momenta pi, with i being a 1-based index, assigned incrementally with mesons first, then vectors, etc."),
+          wrap('X').fill(f"Specify the number of external legs (all diagrams have the same). Each argument is a number followed by a character specifying the type of particle. The particle types are {and_join([f'{p}({n[1:]})' for p,n in PARTICLES.items()])}. The particle specifier defaults to M(eson) if omitted. The number defaults to 1 if omitted. The number of each type of particle may be specified only once, and if it is not specified at all, it is set to zero.  External legs are assigned incoming momenta pi, with i being a 1-based index, assigned incrementally with mesons first, then vectors, etc."),
           wrap('L').fill("Define loop momenta, each one given as a separate argument. Bear in mind that l1, l2, etc. may clash with the names of the LECs."),
           wrap('M').fill("Define external momenta, each one given as a separate argument. All independent external momenta should be explicitly given this way."),
           wrap('R').fill("Specify a replacement to be applied to the expressions. For example, this may be used to implement conservation of external momentum, or to replace the automatically assigned external momenta with user-defined ones. Takes two arguments, the left- and right-hand side of the replacement, respectively. Example: 'R p4 -(p1+p2+p3)' for 4-point diagrams. Bear in mind that the expressions should work in both FORM and Mathematica."),
@@ -1774,7 +1782,10 @@ def main():
     except FileNotFoundError as err:
         logger.error(f".chpt file not found: '{args.file}'", extra=logextra)
     except ChPTError as err: # User error
-        logging.error(err, extra=logextra)
+        if args.debug:
+            logging.error(traceback.format_exc(), extra=logextra)
+        else:
+            logging.error(err, extra=logextra)
     except Exception: # Debugging error
         logging.error(traceback.format_exc(), extra=logextra)
 
