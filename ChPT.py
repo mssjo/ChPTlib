@@ -457,9 +457,9 @@ class Diagram:
                                 "#endif"
                                 ]), file=formfile)
                         case 'A':
-                            print(f"    id,all A(?lorentz, mu?mu{tag}x) = ext(external[{ext}], mu) * derivs(p{ext}, ?lorentz);", file=formfile)
+                            print(f"id,all A(?lorentz, mu?mu{tag}x) = ext(external[{ext}], mu) * derivs(p{ext}, ?lorentz);", file=formfile)
                         case 'S' | 'P':
-                            print(f"    id,all {particle}(?lorentz) = derivs(p{ext}, ?lorentz);", file=formfile)
+                            print(f"id,all {particle}(?lorentz) = derivs(p{ext}, ?lorentz);", file=formfile)
                         case _:
                             raise ChPTError(f"Particle type '{particle}' not implemented for pickout")
 
@@ -1366,7 +1366,7 @@ class DiagramSet:
                     endrepeat;'''),
                 ' '*4)),
             self.insert_procedure('replacementlist',
-                    '\n    '.join(f'id {lhs} = {rhs};' for lhs,rhs in self.replacements())
+                    '\n'.join(f'    id {lhs} = {rhs};' for lhs,rhs in self.replacements())
                 )
             )), file=formfile)
 
