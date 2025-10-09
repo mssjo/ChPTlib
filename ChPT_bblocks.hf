@@ -129,6 +129,7 @@
 #define BBLOCKMAXRANK "{`ORDER'/2}"
 #if `ORDER' >= 4
     #redefine BBLOCKS0 "`BBLOCKS0',chim"
+    #redefine BBLOCKS1 "`BBLOCKS1',chix,chidagx"
     #define BBLOCKS2 "fp,fm,FL,FR"
     #ifdef `NF'
         #if `NF'==2
@@ -314,6 +315,8 @@
                 id r(`FIELDSQ',mu?)
                     = V(mu) * `DELTA(0,1,0,0,0)'
                     + A(mu) * `DELTA(0,0,1,0,0)';
+            #else
+                id l?{l,r}(`FIELDSQ',mu?) = 0;
             #endif
         #endif
     #else

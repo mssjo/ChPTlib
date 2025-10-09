@@ -183,6 +183,18 @@ local vertex`SHORTNAME' =
 
 #endif
 
+* * Use Cayley-Hamilton relations to simplify Nf=2 case
+* #if (`NF'==2)&&(`NM'>0)
+*     .sort
+*
+*     #define FLAVS "`NM'"
+*     #include ChPT_external.hf
+*
+*     #call cayham(vertex`SHORTNAME')
+*
+*     sum <f1>,...,<f`NM'>;
+* #endif
+
 bracket i_,F,`LECS',Tr;
 print +s;
 .sort

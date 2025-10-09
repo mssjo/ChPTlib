@@ -399,7 +399,7 @@ local bb`BBLOCK'`RANK'`FIELDINFO' =
             #endif
             ;
 
-            #call substitute(chi,0)
+            #call substitute(chi`dag',0)
             #break
 
 *         chitil = (det(chi)/chi)^-1, used in some contact terms

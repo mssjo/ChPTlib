@@ -1,5 +1,6 @@
 
 * The ChPT lagrangian at NLO (order p^4)
+* Based on Scherer & Schindler's modernized formulation of Gasser & Leutwyler
 
 #procedure p4term(IN,I3,I2)
     #call pXterm(`IN',L,`I3',L,`I2',l)
@@ -31,18 +32,21 @@
                         (-i_*(tr(FR(mu,nu), U(mu), Udag(nu)) + tr(FL(mu,nu), Udag(mu), U(nu))))
 #call p4term(10,10,5)
                         tr(Udag, FR(mu,nu), U, FL(mu,nu))
+#call p4term(X,X,4/2)
+                        tr(chidagx(mu), U(mu))
 #call p4cterm(1,1,2)
                         (tr(FR(mu,nu), FR(mu,nu)) + tr(FL(mu,nu), FL(mu,nu)))
 #call p4cterm(2,2,1)
                         tr(chidag, chi)
 #call p4cterm(X,X,3)
+*                         tr(chitil, chitildag)
                         (  (tr(chi, Udag) + tr(U, chidag))^2 + (tr(chi, Udag) - tr(U, chidag))^2 - 2*(tr(chi, Udag, chi, Udag) + tr(U, chidag, U, chidag)))
 
 
 #if (`NF' == 2)
     ;* Account for how Gasser & Leutwyler originally wrote things weirdly
     id h1 = (h1+h3)/4;
-    id h3 = (h1-h3)/16;
+    al h3 = (h1-h3)/16;
 #endif
 
 * #ifdef `NF'
