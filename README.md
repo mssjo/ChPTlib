@@ -1,5 +1,6 @@
 [![Author: Mattias Sjö](https://img.shields.io/badge/author-Mattias%20Sj%C3%B6-blue)](https://inspirehep.net/authors/2747078)
 [![Language: FORM](https://img.shields.io/badge/language-FORM-yellow)](https://www.nikhef.nl/~form/)
+[![arXiv: 2510.12885](https://img.shields.io/badge/arXiv-2510.12885-red)](https://arxiv.org/abs/2510.12885)
 
 
 # ChPTlib
