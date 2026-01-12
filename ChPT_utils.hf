@@ -35,7 +35,7 @@
     #endif
 #endprocedure
 
-* With MUTEX set to a list of variable names, this ensures that those are
+* With VARS set to a list of variable names, this ensures that those are
 * mutually exclusive (at most one defined)
 #procedure mutex(VARS)
     #define N "0"
