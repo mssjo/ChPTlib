@@ -328,7 +328,7 @@ cfunctions prop, propmatrix, coeff;
 functions sum, derivs, dummy;
 
 symbols d, [d], <[d-1]>,...,<[d-4]>;
-symbols kappa, eps,etil, log4pi;
+symbols pi16, eps,etil, log4pi;
 symbols L, Lp
     #ifdef `PKEMASS'
         ,Lk,Le

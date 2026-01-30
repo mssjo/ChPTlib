@@ -22,7 +22,7 @@
 
     #if (isdefined(NORENORM)==0)&&(`ORD'<=`ORDER')
         #ifdef `SQED'
-            id delA(4) = e^2/3 * i_*kappa*[expCtad0eps] / eps;
+            id delA(4) = e^2/3 * i_*pi16*[expCtad0eps] / eps;
             id delEE(4) = 2*delE(4) - i_*delZ(4);
         #else
             #switch `ORD'
@@ -87,7 +87,7 @@
             #message[renorm]~~~ Unknown renormalization scheme `SCHEME'
             #terminate
     #endswitch
-    id Lambda = kappa / [d-4];
+    id Lambda = pi16 / [d-4];
 
     #call qrenorm
     #call expandD(`MAXEPS')
@@ -116,7 +116,7 @@
 
 #procedure qrenorm()
 *     Newer Bijnens "q" convention for the renormalized LECs,
-*     absorbing annoying kappas from the "r" convention
+*     absorbing annoying pi16s from the "r" convention
 
     #if `ORDER'>`MFORDER'
         #define MAX "`ORDER'"
@@ -127,7 +127,7 @@
     #ifdef `QRENORM'
         #do ORD=4,`MAX',2
             #do L={``NORDER`ORD''LECSBARE'}
-                id `L'r = kappa^{(`ORD'-2)/2} * `L'q;
+                id `L'r = pi16^{(`ORD'-2)/2} * `L'q;
             #enddo
         #enddo
     #endif
@@ -153,24 +153,24 @@
 *             The below formula follows from inverting that relation.
 
 *             xi is a power-counting parameter like in the equal-mass case below,
-*             except that the kappa*mass is excluded from it
+*             except that the pi16*mass is excluded from it
 
             id m0p2^n? = mp2^n * (1 - n*xi * (Mpp*mp2 + Mpk*mk2));
             id m0k2^n? = mk2^n * (1 - n*xi * (Mkp*mp2 + Mkk*mk2));
 
 *             From Gasser & Leutwyler '85 via Gomez-Nicola & Pelaez '01
             id Mpp =
-                    + 1/2 * Lp*kappa
-                    + 1/18 * Le*kappa
+                    + 1/2 * Lp*pi16
+                    + 1/18 * Le*pi16
                     + 8 * (2*L6r + 2*L8r - L4r - L5r);
             id Mpk =
-                    - 2/9 * Le*kappa
+                    - 2/9 * Le*pi16
                     + 16 * (2*L6r - L4r);
             id Mkp =
-                    - 1/9 * Le*kappa
+                    - 1/9 * Le*pi16
                     + 8*(2*L6r - L4r);
             id Mkk =
-                    + 4/9 * Le*kappa
+                    + 4/9 * Le*pi16
                     + 8*(4*L6r + 2*L8r - 2*L4r - L5r);
 
             .sort
@@ -179,8 +179,8 @@
 *             Similar story with the decay constant, but simpler since we only use Fp.
 
             id 1/F^n? = 1/Fp^n * (1 + n*xi * (
-                - Lp*mp2*kappa
-                - 1/2 * Lk*mk2*kappa
+                - Lp*mp2*pi16
+                - 1/2 * Lk*mk2*pi16
                 + 4*mp2 * (L4r + L5r)
                 + 8*mk2 * L4r
                 ));
@@ -231,7 +231,7 @@
 
 *         Truncate at appropriate order
         if(count(xi,1)>`XIMAX') discard;
-        id xi = kappa * mp2/Fp^2;
+        id xi = pi16 * mp2/Fp^2;
 
 *         Translate to the a coefficients of the original relation
         #include- invert_massdecay.hf
@@ -287,22 +287,22 @@
 
     #ifdef `PKEMASS'
 *         From Gomez Nicola & Pelaez '01
-*         with lambda = -kappa/2/etil in Bijnens' convention
+*         with lambda = -pi16/2/etil in Bijnens' convention
 *         GN&P are also a little inconsistent regatding m0 vs m, but that doesn't
 *         matter until NNLO
         id ZpNLO
-            = 2*m0p2*Lp*kappa/3
-            + 1*m0k2*Lk*kappa/3
+            = 2*m0p2*Lp*pi16/3
+            + 1*m0k2*Lk*pi16/3
             - 4*lambda/3 * (2*m0p2 + m0k2)
             - 8*(2*L4r*m0k2 + (L4r+L5r)*m0p2);
         id ZkNLO
-            = m0p2*Lp*kappa/4
-            + m0k2*Lk*kappa/2
-            + m0e2*Le*kappa/4
+            = m0p2*Lp*pi16/4
+            + m0k2*Lk*pi16/2
+            + m0e2*Le*pi16/4
             - 2*lambda/3 * (m0p2 + 5*m0k2)
             - 8*((2*L4r+L5r)*m0k2 + L4r*m0p2);
         id ZeNLO
-            = m0k2*Lk*kappa
+            = m0k2*Lk*pi16
             - 4*lambda*m0k2
             - 8/3*((3*L4r-L5r)*m0p2 + 2*(3*L4r+2*L5r)*m0k2);
     #else
@@ -314,8 +314,8 @@
 
 #procedure expandD(MAXEPS)
 
-    id pi^2 = 1/(16*kappa);
-    id 1/pi^2 = 16*kappa;
+    id pi^2 = 1/(16*pi16);
+    id 1/pi^2 = 16*pi16;
 
     id d^n? = [d]^n;
 

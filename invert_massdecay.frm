@@ -14,7 +14,7 @@ off statistics;
 #write <invert_massdecay.hf> "* Follows the notation of Bijnens & Hermansson-Truedsson (2017)\n"
 
 symbols M02,F0, M2,F, L0,L, m1,m2,m3,f1,f2,f3;
-symbols n, kappa;
+symbols n, pi16;
 symbols x(:3), xi(:3);
 autodeclare symbol aM,aF, bM,bF;
 
@@ -43,7 +43,7 @@ autodeclare symbol aM,aF, bM,bF;
 
 local [M/M] = M02/M2 * `XLEXPAND(x,L0,aM)';
 local [F/F] = F0/F * `XLEXPAND(x,L0,aF)';
-local [x] = M02/F0^2 * kappa;
+local [x] = M02/F0^2 * pi16;
 
 
 id M02^n? = M2^n * (`NEXPAND(m,xi)');
@@ -51,7 +51,7 @@ id F0^n?  = F^n * (`NEXPAND(f,xi)');
 `LEXPAND(m,L,bM)'
 `LEXPAND(f,L,bF)'
 
-id M2/F^2 = xi/kappa;
+id M2/F^2 = xi/pi16;
 
 bracket xi,L;
 print +s [x];

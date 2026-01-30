@@ -8,16 +8,16 @@
         #ifdef `QRENORM'
             id `LEC'q = `LEC'q
                 - (`GAMMA2')/2 * (`CHANGEMU')^2
-                - ((`GAMMA1') + (`GAMMAL')/kappa) * (`CHANGEMU');
+                - ((`GAMMA1') + (`GAMMAL')/pi16) * (`CHANGEMU');
         #else
             id `LEC'r = `LEC'r
-                - kappa^2*(`GAMMA2')/2 * (`CHANGEMU')^2
-                - kappa^2*((`GAMMA1') + (`GAMMAL')/kappa) * (`CHANGEMU');
+                - pi16^2*(`GAMMA2')/2 * (`CHANGEMU')^2
+                - pi16^2*((`GAMMA1') + (`GAMMAL')/pi16) * (`CHANGEMU');
         #endif
     #else
         id `LEC' = [(cmu)^(d-4)]^2/F^2 * (`LEC'r
             - (`GAMMA2') * Lambda^2
-            - ((`GAMMA1')*kappa + (`GAMMAL')) * Lambda
+            - ((`GAMMA1')*pi16 + (`GAMMAL')) * Lambda
             );
     #endif
 #endprocedure

@@ -11,7 +11,7 @@
         #ifdef `QRENORM'
             id `LEC'q = `LEC'q + (`GAMMA')/2 * `CHANGEMU';
         #else
-            id `LEC'r = `LEC'r + kappa*(`GAMMA')/2 * `CHANGEMU';
+            id `LEC'r = `LEC'r + pi16*(`GAMMA')/2 * `CHANGEMU';
         #endif
     #else
         id `LEC' = [(cmu)^(d-4)] * (`LEC'r + (`GAMMA') * Lambda);

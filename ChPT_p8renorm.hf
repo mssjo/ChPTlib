@@ -12,15 +12,15 @@
                 - 3/2  * (`GAMMA1') * (`CHANGEMU');
         #else
             id `LEC'r = `LEC'r
-                - kappa^3 * 9/16 * (`GAMMA3') * (`CHANGEMU')^3
-                - kappa^3 * 9/8  * (`GAMMA2') * (`CHANGEMU')^2
-                - kappa^3 * 3/2  * (`GAMMA1') * (`CHANGEMU');
+                - pi16^3 * 9/16 * (`GAMMA3') * (`CHANGEMU')^3
+                - pi16^3 * 9/8  * (`GAMMA2') * (`CHANGEMU')^2
+                - pi16^3 * 3/2  * (`GAMMA1') * (`CHANGEMU');
         #endif
     #else
         id `LEC' = [(cmu)^(d-4)]^3/F^4 * (`LEC'r
             - (`GAMMA3') * Lambda^3
-            - (`GAMMA2') * kappa * Lambda^2
-            - (`GAMMA1') * kappa^2 * Lambda
+            - (`GAMMA2') * pi16 * Lambda^2
+            - (`GAMMA1') * pi16^2 * Lambda
             );
     #endif
 #endprocedure
