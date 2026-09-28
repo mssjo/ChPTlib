@@ -84,12 +84,23 @@
     #message[loadtagged]~~~ Tagging individual loaded expressions
     #call loadsum(`NAME')
 #endprocedure
+* Expressions in save files are prefixed by this.
+* Depending on the load mode, the way the expressions are loaded differs:
+*  default: load each expression as a new expression
+*  LOADMODExSUM: load the sum of all expressions (thus #call load needs to be
+*                on the right-hand side of an assignment)
+*  LOADMODExDIFF: subtract the new value from the existing expression of this name
+*  LOADMODExTAG: multiply the loaded expression by tagNAME (compatible with all
+*                other modes
 #procedure loadprefix(NAME,FILE)
     #message[load]~~~ `NAME' <- `FILE'
     #ifdef `LOADMODExSUM'
         +
     #else
         ; global `NAME' =
+        #ifdef `LOADMODExDIFF'
+            -(`NAME') +
+        #endif
     #endif
     #ifdef `LOADMODExTAG'
         tag`NAME' *

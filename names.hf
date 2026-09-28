@@ -3,6 +3,12 @@
 * - naming save files
 * - calling external programs with the same options
 
+* This file is written so that it can be easily translated into Make.
+* That means:
+* - no #elseif
+* - no compound conditions
+* - really, nothing besides #include, #(re)define, #if(def) and #else
+
 #include dirs.hf
 
 #define NAMESUFFIX ""
@@ -12,8 +18,8 @@
 #define FIELDINFO ""
 #define POWERINFO ""
 
+* Order information
 #ifdef `ORDER'
-*     No elseif since that is not supported by make
     #if `ORDER'==2
         #define NORDER "LO"
     #endif
@@ -34,6 +40,7 @@
     #redefine MAKEOPTS "ORDER=`ORDER'"
     #redefine POWERINFO "`NORDER'x"
 #endif
+* Number-of-fields information
 #ifdef `NM'
     #define HASINFO "1"
     #if `NM'
@@ -106,6 +113,7 @@
     #endif
 #endif
 
+* Flavor information
 #ifdef `PKEMASS'
     #redefine NAMESUFFIX "`NAMESUFFIX'_PKE"
     #redefine FORMOPTS "`FORMOPTS' -d PKEMASS"
@@ -124,11 +132,8 @@
         #redefine MAKEOPTS "`MAKEOPTS' NF=`NF'"
     #endif
 #endif
-#ifdef `CAYHAM'
-    #redefine NAMESUFFIX "`NAMESUFFIX'_CAYHAM"
-    #redefine FORMOPTS "`FORMOPTS' -d CAYHAM"
-    #redefine MAKEOPTS "`MAKEOPTS' CAYHAM=1"
-#endif
+
+* Parametrization information
 #ifdef `PAR'
     #redefine NAMESUFFIX "`NAMESUFFIX'_`PAR'PAR"
     #redefine FORMOPTS "`FORMOPTS' -d PAR=`PAR'"
@@ -136,6 +141,13 @@
 #else
     #redefine NAMESUFFIX "`NAMESUFFIX'_EXPPAR"
     #redefine MAKEOPTS "`MAKEOPTS' PAR=EXP"
+#endif
+
+* Various other flags
+#ifdef `CAYHAM'
+    #redefine NAMESUFFIX "`NAMESUFFIX'_CAYHAM"
+    #redefine FORMOPTS "`FORMOPTS' -d CAYHAM"
+    #redefine MAKEOPTS "`MAKEOPTS' CAYHAM=1"
 #endif
 #ifdef `QED'
     #redefine NAMESUFFIX "`NAMESUFFIX'_QED"
@@ -153,21 +165,29 @@
     #redefine MAKEOPTS "`MAKEOPTS' TRANSFORM=`TRANSFORM'"
 #endif
 
+* Suppress suffix if requested
+#ifdef `NOSUFFIX'
+    #define NAMESUFFIX ""
+#endif
+
+* Assemble Make command
 #define MAKECMD "make --no-print-directory `MAKEOPTS'"
 #ifdef `FORCEMAKE'
     #redefine MAKECMD "`MAKECMD' -B"
 #endif
 
+* Assemble save file name
 #ifdef `NAME'
     #define SAVEDIR "`LOCALDIR'/save"
     #define SAVENAME "`SAVEDIR'/`NAME'`NAMESUFFIX'"
     #define SAVEEXT ".hf"
 #endif
 
+* Assemble Lagrangian building block name
 #define BBLOCKDIR "`CHPTDIR'/bblocks"
 #define BBLOCKNAME "bb`NAMESUFFIX'"
 
-
+* Assemble various other names
 #ifdef `HASINFO'
     #define VERTEXDIR "`CHPTDIR'/vertices"
     #define SHORTNAME "`POWERINFO'`FIELDINFO'"
