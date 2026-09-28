@@ -109,10 +109,14 @@
 *     id Tr(i?, j?) = d_(i,j);
 
     #ifdef `PKEMASS'
-*         repeat id Tr(chi, ?a) = (2*mhat + ms)/3 * Tr(?a) + 2*(mhat - ms)/sqrt6 * Tr(8, ?a);
         repeat id Tr(chi, ?a)
-            = Tr(?a) * (m0p2 + 2*m0k2)/3
-            + Tr(8, ?a) * 2*(m0p2 - m0k2)*sqrt2*sqrt3/3;
+            #ifdef `QUARKMASS'
+                = Tr(?a) * (2*mhat + ms)/3
+                + Tr(8, ?a) * 2*(mhat - ms)/sqrt6;
+            #else
+                = Tr(?a) * (m0p2 + 2*m0k2)/3
+                + Tr(8, ?a) * 2*(m0p2 - m0k2)*sqrt2*sqrt3/3;
+            #endif
 
         repeat id Tr(8,8,?a) = Tr(?a)/3 - Tr(8,?a)/sqrt6;
         id Tr(f1?extflav) = 0;
@@ -162,5 +166,3 @@
         endif;
     #endif
 #endprocedure
-
-#endif
