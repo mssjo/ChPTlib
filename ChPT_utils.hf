@@ -52,7 +52,10 @@
 #endprocedure
 
 * Saving and loading expressions
-* Not using .store-save-load since it is rather clumsy
+* Not using built-in .store-save-load since it is rather clumsy
+* When experimenting with files in a way that affects the data being saves,
+* the flag BREAKSAVE can be set to prevent downstream files from accidentally
+* loading invalid expression.
 #procedure save(NAME)
     #include- names.hf
     #create <`SAVENAME'`SAVEEXT'>
@@ -60,11 +63,17 @@
     #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ Saved by: `NAME_'"
     #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ Saved on: `DATE_'"
     #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ FORMOPTS: `FORMOPTS'"
-    #do EXPR={`ACTIVEEXPRNAMES_'}
-        #message[save]~~~ `EXPR' -> `SAVENAME'`SAVEEXT'
-        #write <`SAVENAME'`SAVEEXT'> "#call loadprefix(`EXPR',`SAVENAME'`SAVEEXT')"
-        #write <`SAVENAME'`SAVEEXT'> "     (%E)",`EXPR'
-    #enddo
+    #ifdef `BREAKSAVE'
+        #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ BREAKSAVE: saved data has been broken."
+        #write <`SAVENAME'`SAVEEXT'> "#message[load]~~~ BREAKSAVE: Check settings in `NAME_'."
+        #write <`SAVENAME'`SAVEEXT'> "#terminate"
+    #else
+        #do EXPR={`ACTIVEEXPRNAMES_'}
+            #message[save]~~~ `EXPR' -> `SAVENAME'`SAVEEXT'
+            #write <`SAVENAME'`SAVEEXT'> "#call loadprefix(`EXPR',`SAVENAME'`SAVEEXT')"
+            #write <`SAVENAME'`SAVEEXT'> "     (%E)",`EXPR'
+        #enddo
+    #endif
 #endprocedure
 #procedure load(NAME)
     #include- names.hf
